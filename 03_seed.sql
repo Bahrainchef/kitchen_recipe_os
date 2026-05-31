@@ -298,7 +298,7 @@ insert into public.ingredient_master (canonical_name, category, default_unit, al
 -- =============================================================================
 
 -- select count(*) as venue_count from public.venues;                -- expect 8
--- select count(*) as section_count from public.sections;            -- expect 82
+-- select count(*) as section_count from public.sections;            -- expect 84
 -- select count(*) as ingredient_count from public.ingredient_master; -- expect 38
 
 -- select name, country_code, vat_rate, venue_type, sort_order
