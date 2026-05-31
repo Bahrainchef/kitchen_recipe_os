@@ -36,6 +36,7 @@ const SECTION_ICONS: Record<string, string> = {
   'creams & fillings':     '🍯',
   'doughs':                '🫓',
   'the box exclusives':    '📦',
+  'ramadan':               '🌙',
   'christmas':             '🎄',
   '60x40':                 '📐',
 }
