@@ -294,8 +294,7 @@ function NoSupabasePlaceholder({ venueName, venueId, sectionId, sectionName }: {
 }
 
 function formatQty(qty: number, unit: string | null): string {
-  if (unit?.toLowerCase() === 'each') return String(Math.round(qty))
-  return String(Math.round(qty * 1000))
+  return String(Math.round(qty))
 }
 
 function displayUnit(unit: string | null): string {
