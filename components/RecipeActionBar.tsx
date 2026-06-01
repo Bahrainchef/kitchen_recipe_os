@@ -25,6 +25,8 @@ interface Props {
 export function RecipeActionBar({ backLabel, backHref, recipeId, themeColor, recipe, ingredients, steps }: Props) {
   const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
@@ -37,6 +39,19 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, themeColor, rec
     setEditOpen(false)
     setToast('Recipe saved successfully')
     router.refresh()
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    const res = await fetch(`/api/recipes/${recipeId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setToast('Recipe deleted')
+      setTimeout(() => router.push(backHref), 600)
+    } else {
+      setDeleting(false)
+      setDeleteConfirm(false)
+      setToast('Failed to delete recipe')
+    }
   }
 
   return (
@@ -114,6 +129,18 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, themeColor, rec
             </svg>
             <span className="hidden tablet:inline">Notes</span>
           </button>
+
+          <button
+            onClick={() => setDeleteConfirm(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(220,38,38,0.08)] active:scale-[0.97]"
+            style={{ background: '#FFFFFF', border: '1px solid rgba(220,38,38,0.28)', color: '#dc2626' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 3.5h10M5.5 3.5V2h3v1.5M3.5 3.5l.5 8.5h6l.5-8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M6 6v4M8 6v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+            <span className="hidden tablet:inline">Delete</span>
+          </button>
         </div>
 
         {/* Home */}
@@ -150,6 +177,52 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, themeColor, rec
           onClose={() => setEditOpen(false)}
           onSaved={handleSaved}
         />
+      )}
+
+      {/* Delete confirmation */}
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center px-5 no-print"
+          style={{ background: 'rgba(26,23,20,0.55)' }}
+          onClick={() => { if (!deleting) setDeleteConfirm(false) }}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center mb-4"
+              style={{ background: 'rgba(220,38,38,0.10)' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M2.5 4.5h13M7 4.5V3h4v1.5M4.5 4.5l.5 11h8l.5-11" stroke="#dc2626" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M7.5 8v5M10.5 8v5" stroke="#dc2626" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+            </div>
+            <h3 className="font-fraunces text-[20px] text-text-primary mb-2">Delete recipe?</h3>
+            <p className="text-text-secondary text-[14px] leading-relaxed mb-6">
+              Are you sure you want to delete <strong>{recipe.title}</strong>? This cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                disabled={deleting}
+                className="px-4 py-2 rounded-lg text-[13px] font-semibold transition-opacity hover:opacity-70 disabled:opacity-40"
+                style={{ background: 'rgba(26,23,20,0.07)', color: '#1A1714' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 rounded-lg text-[13px] font-semibold transition-opacity hover:opacity-80 disabled:opacity-60"
+                style={{ background: '#dc2626', color: '#FFFFFF' }}
+              >
+                {deleting ? 'Deleting…' : 'Delete recipe'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )

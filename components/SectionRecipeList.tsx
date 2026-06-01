@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Recipe } from '@/lib/types/database.types'
 
 const STATUS_STYLES: Record<string, { label: string; bg: string; text: string; dot: string }> = {
@@ -70,8 +71,34 @@ interface Props {
 export function SectionRecipeList({
   recipes, venueId, sectionId, sectionName, themeColor, countryCode, photoMap = {},
 }: Props) {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [view, setView] = useState<'list' | 'grid'>('list')
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [listToast, setListToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!listToast) return
+    const t = setTimeout(() => setListToast(null), 3000)
+    return () => clearTimeout(t)
+  }, [listToast])
+
+  const handleDeleteConfirm = async () => {
+    if (!pendingDelete) return
+    setDeleting(true)
+    const res = await fetch(`/api/recipes/${pendingDelete.id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setPendingDelete(null)
+      setDeleting(false)
+      setListToast('Recipe deleted')
+      router.refresh()
+    } else {
+      setDeleting(false)
+      setPendingDelete(null)
+      setListToast('Failed to delete recipe')
+    }
+  }
 
   useEffect(() => {
     const saved = localStorage.getItem(`section-view-${sectionId}`)
@@ -193,8 +220,65 @@ export function SectionRecipeList({
               currency={currency}
               rowIndex={i}
               isLast={i === filtered.length - 1}
+              onDeleteRequest={setPendingDelete}
             />
           ))}
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {pendingDelete && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center px-5"
+          style={{ background: 'rgba(26,23,20,0.55)' }}
+          onClick={() => { if (!deleting) setPendingDelete(null) }}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center mb-4"
+              style={{ background: 'rgba(220,38,38,0.10)' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M2.5 4.5h13M7 4.5V3h4v1.5M4.5 4.5l.5 11h8l.5-11" stroke="#dc2626" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M7.5 8v5M10.5 8v5" stroke="#dc2626" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+            </div>
+            <h3 className="font-fraunces text-[20px] text-text-primary mb-2">Delete recipe?</h3>
+            <p className="text-text-secondary text-[14px] leading-relaxed mb-6">
+              Are you sure you want to delete <strong>{pendingDelete.title}</strong>? This cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setPendingDelete(null)}
+                disabled={deleting}
+                className="px-4 py-2 rounded-lg text-[13px] font-semibold transition-opacity hover:opacity-70 disabled:opacity-40"
+                style={{ background: 'rgba(26,23,20,0.07)', color: '#1A1714' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+                className="px-4 py-2 rounded-lg text-[13px] font-semibold transition-opacity hover:opacity-80 disabled:opacity-60"
+                style={{ background: '#dc2626', color: '#FFFFFF' }}
+              >
+                {deleting ? 'Deleting…' : 'Delete recipe'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {listToast && (
+        <div
+          className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 px-5 py-2.5 rounded-full text-[13px] font-semibold shadow-lg pointer-events-none"
+          style={{ background: '#1A1714', color: '#FFFFFF' }}
+        >
+          ✓ {listToast}
         </div>
       )}
     </div>
@@ -287,71 +371,87 @@ function RecipeCard({
 // ─── List row ────────────────────────────────────────────────────────────────
 
 function RecipeRow({
-  recipe, venueId, sectionId, themeColor, currency, rowIndex, isLast,
+  recipe, venueId, sectionId, themeColor, currency, rowIndex, isLast, onDeleteRequest,
 }: {
   recipe: Recipe; venueId: string; sectionId: string; themeColor: string
   currency: string; rowIndex: number; isLast: boolean
+  onDeleteRequest: (r: { id: string; title: string }) => void
 }) {
   const s = STATUS_STYLES[recipe.status] ?? STATUS_STYLES.draft
   const costBadge = costBadgeStyle(recipe.cost_percentage)
 
   return (
-    <Link
-      href={`/venues/${venueId}/sections/${sectionId}/recipes/${recipe.id}`}
-      className="flex items-center justify-between px-5 py-4 group transition-colors"
+    <div
+      className="group flex items-center transition-colors"
       style={{
         borderBottom: isLast ? 'none' : '1px solid rgba(26,23,20,0.06)',
         background: rowIndex % 2 === 1 ? 'rgba(26,23,20,0.025)' : 'transparent',
       }}
     >
-      <div className="flex items-center gap-4 min-w-0 flex-1">
-        <div className="shrink-0 w-2 h-2 rounded-full mt-0.5" style={{ background: s.dot }} />
-
-        <div className="min-w-0 flex-1">
-          <span className="font-fraunces text-[15px] text-text-primary truncate block group-hover:text-black transition-colors">
-            {recipe.title}
-          </span>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            {recipe.portion_size && (
-              <Chip>{recipe.portion_size} {recipe.portion_size === 1 ? 'portion' : 'portions'}</Chip>
-            )}
-            {(recipe.selling_price ?? 0) > 0 && (
-              <Chip>{recipe.selling_price!.toFixed(3)} {currency}</Chip>
-            )}
-            {(recipe.cost_per_portion ?? 0) > 0 && (
-              <Chip>{recipe.cost_per_portion!.toFixed(3)} / portion</Chip>
-            )}
-            {recipe.version_number > 1 && (
-              <span className="text-[11px] text-text-muted">v{recipe.version_number}</span>
-            )}
+      <Link
+        href={`/venues/${venueId}/sections/${sectionId}/recipes/${recipe.id}`}
+        className="flex items-center justify-between px-5 py-4 flex-1 min-w-0"
+      >
+        <div className="flex items-center gap-4 min-w-0 flex-1">
+          <div className="shrink-0 w-2 h-2 rounded-full mt-0.5" style={{ background: s.dot }} />
+          <div className="min-w-0 flex-1">
+            <span className="font-fraunces text-[15px] text-text-primary truncate block group-hover:text-black transition-colors">
+              {recipe.title}
+            </span>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {recipe.portion_size && (
+                <Chip>{recipe.portion_size} {recipe.portion_size === 1 ? 'portion' : 'portions'}</Chip>
+              )}
+              {(recipe.selling_price ?? 0) > 0 && (
+                <Chip>{recipe.selling_price!.toFixed(3)} {currency}</Chip>
+              )}
+              {(recipe.cost_per_portion ?? 0) > 0 && (
+                <Chip>{recipe.cost_per_portion!.toFixed(3)} / portion</Chip>
+              )}
+              {recipe.version_number > 1 && (
+                <span className="text-[11px] text-text-muted">v{recipe.version_number}</span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 shrink-0 ml-4">
-        {costBadge && (
+        <div className="flex items-center gap-2 shrink-0 ml-4">
+          {costBadge && (
+            <span
+              className="text-[11px] font-semibold px-2 py-0.5 rounded tabular-nums"
+              style={{ background: costBadge.bg, color: costBadge.text }}
+            >
+              {costBadge.label}
+            </span>
+          )}
           <span
-            className="text-[11px] font-semibold px-2 py-0.5 rounded tabular-nums"
-            style={{ background: costBadge.bg, color: costBadge.text }}
+            className="text-[11px] font-medium px-2 py-0.5 rounded"
+            style={{ background: s.bg, color: s.text }}
           >
-            {costBadge.label}
+            {s.label}
           </span>
-        )}
-        <span
-          className="text-[11px] font-medium px-2 py-0.5 rounded"
-          style={{ background: s.bg, color: s.text }}
-        >
-          {s.label}
-        </span>
-        <svg
-          width="13" height="13" viewBox="0 0 13 13" fill="none"
-          className="opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ color: themeColor }}
-        >
-          <path d="M2 6.5h9M7 2.5l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          <svg
+            width="13" height="13" viewBox="0 0 13 13" fill="none"
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ color: themeColor }}
+          >
+            <path d="M2 6.5h9M7 2.5l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </Link>
+
+      {/* Trash icon — appears on row hover */}
+      <button
+        onClick={() => onDeleteRequest({ id: recipe.id, title: recipe.title })}
+        title="Delete recipe"
+        className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mr-3 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[rgba(220,38,38,0.08)]"
+        style={{ color: '#dc2626' }}
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M2 3.5h10M5.5 3.5V2h3v1.5M3.5 3.5l.5 8.5h6l.5-8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M6 6v4M8 6v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
         </svg>
-      </div>
-    </Link>
+      </button>
+    </div>
   )
 }
 

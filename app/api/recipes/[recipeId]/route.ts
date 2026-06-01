@@ -88,3 +88,29 @@ export async function PATCH(
 
   return NextResponse.json({ recipe })
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ recipeId: string }> }
+) {
+  const { recipeId } = await params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createAdminClient() as any
+
+  // Remove storage files (best-effort — ignore errors)
+  const { data: files } = await sb.storage.from('recipe-images').list(`recipes/${recipeId}`)
+  if (files?.length) {
+    const paths = files.map((f: { name: string }) => `recipes/${recipeId}/${f.name}`)
+    await sb.storage.from('recipe-images').remove(paths)
+  }
+
+  // Delete child records first
+  await sb.from('recipe_media').delete().eq('recipe_id', recipeId)
+  await sb.from('recipe_steps').delete().eq('recipe_id', recipeId)
+  await sb.from('recipe_ingredients').delete().eq('recipe_id', recipeId)
+
+  const { error } = await sb.from('recipes').delete().eq('id', recipeId)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ success: true })
+}
