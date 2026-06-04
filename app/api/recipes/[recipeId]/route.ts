@@ -19,6 +19,7 @@ interface RecipePatch {
   portion_size?: number | null
   selling_price?: number | null
   status?: string
+  section_id?: string
   ingredients?: IngredientPayload[]
   steps?: StepPayload[]
 }
@@ -46,6 +47,7 @@ export async function PATCH(
   if (body.portion_size !== undefined) recipeUpdate.portion_size  = body.portion_size
   if (body.selling_price !== undefined) recipeUpdate.selling_price = body.selling_price
   if (body.status       !== undefined) recipeUpdate.status        = body.status
+  if (body.section_id   !== undefined) recipeUpdate.section_id    = body.section_id
 
   const { data: recipe, error: rErr } = await sb
     .from('recipes').update(recipeUpdate).eq('id', recipeId).select().single()

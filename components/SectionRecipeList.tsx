@@ -66,16 +66,19 @@ interface Props {
   themeColor: string
   countryCode?: string
   photoMap?: Record<string, string>
+  sections?: { id: string; name: string }[]
 }
 
 export function SectionRecipeList({
-  recipes, venueId, sectionId, sectionName, themeColor, countryCode, photoMap = {},
+  recipes, venueId, sectionId, sectionName, themeColor, countryCode, photoMap = {}, sections = [],
 }: Props) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [view, setView] = useState<'list' | 'grid'>('list')
   const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [pendingMove, setPendingMove] = useState<{ id: string; title: string } | null>(null)
+  const [moving, setMoving] = useState(false)
   const [listToast, setListToast] = useState<string | null>(null)
 
   useEffect(() => {
@@ -97,6 +100,26 @@ export function SectionRecipeList({
       setDeleting(false)
       setPendingDelete(null)
       setListToast('Failed to delete recipe')
+    }
+  }
+
+  const handleMoveConfirm = async (targetSectionId: string) => {
+    if (!pendingMove) return
+    setMoving(true)
+    const res = await fetch(`/api/recipes/${pendingMove.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ section_id: targetSectionId }),
+    })
+    if (res.ok) {
+      setPendingMove(null)
+      setMoving(false)
+      setListToast('Recipe moved')
+      router.refresh()
+    } else {
+      setMoving(false)
+      setPendingMove(null)
+      setListToast('Failed to move recipe')
     }
   }
 
@@ -221,6 +244,7 @@ export function SectionRecipeList({
               rowIndex={i}
               isLast={i === filtered.length - 1}
               onDeleteRequest={setPendingDelete}
+              onMoveRequest={sections.filter(s => s.id !== sectionId).length > 0 ? setPendingMove : undefined}
             />
           ))}
         </div>
@@ -266,6 +290,60 @@ export function SectionRecipeList({
                 style={{ background: '#dc2626', color: '#FFFFFF' }}
               >
                 {deleting ? 'Deleting…' : 'Delete recipe'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move picker */}
+      {pendingMove && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center px-5"
+          style={{ background: 'rgba(26,23,20,0.55)' }}
+          onClick={() => { if (!moving) setPendingMove(null) }}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center mb-4"
+              style={{ background: 'rgba(26,23,20,0.07)' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M1.5 6a1 1 0 0 1 1-1h3.5l1.5 1.5H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1V6z" stroke="#1A1714" strokeWidth="1.4" strokeLinejoin="round" />
+                <path d="M7 10.5h4M9.5 8.5l2 2-2 2" stroke="#1A1714" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <h3 className="font-fraunces text-[20px] text-text-primary mb-1">Move recipe</h3>
+            <p className="text-text-secondary text-[14px] mb-4">
+              Move <strong>{pendingMove.title}</strong> to:
+            </p>
+            <div className="rounded-xl overflow-hidden mb-5" style={{ border: '1px solid rgba(26,23,20,0.10)' }}>
+              {sections.filter(s => s.id !== sectionId).map((s, i, arr) => (
+                <button
+                  key={s.id}
+                  onClick={() => handleMoveConfirm(s.id)}
+                  disabled={moving}
+                  className="w-full text-left px-4 py-2.5 text-[14px] transition-colors hover:bg-[rgba(26,23,20,0.04)] disabled:opacity-50"
+                  style={{
+                    color: '#1A1714',
+                    borderBottom: i < arr.length - 1 ? '1px solid rgba(26,23,20,0.07)' : 'none',
+                  }}
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setPendingMove(null)}
+                disabled={moving}
+                className="px-4 py-2 rounded-lg text-[13px] font-semibold transition-opacity hover:opacity-70 disabled:opacity-40"
+                style={{ background: 'rgba(26,23,20,0.07)', color: '#1A1714' }}
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -371,11 +449,12 @@ function RecipeCard({
 // ─── List row ────────────────────────────────────────────────────────────────
 
 function RecipeRow({
-  recipe, venueId, sectionId, themeColor, currency, rowIndex, isLast, onDeleteRequest,
+  recipe, venueId, sectionId, themeColor, currency, rowIndex, isLast, onDeleteRequest, onMoveRequest,
 }: {
   recipe: Recipe; venueId: string; sectionId: string; themeColor: string
   currency: string; rowIndex: number; isLast: boolean
   onDeleteRequest: (r: { id: string; title: string }) => void
+  onMoveRequest?: (r: { id: string; title: string }) => void
 }) {
   const s = STATUS_STYLES[recipe.status] ?? STATUS_STYLES.draft
   const costBadge = costBadgeStyle(recipe.cost_percentage)
@@ -438,6 +517,21 @@ function RecipeRow({
           </svg>
         </div>
       </Link>
+
+      {/* Move icon — appears on row hover when other sections exist */}
+      {onMoveRequest && (
+        <button
+          onClick={() => onMoveRequest({ id: recipe.id, title: recipe.title })}
+          title="Move to section"
+          className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[rgba(26,23,20,0.08)]"
+          style={{ color: '#6E6560' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M1 4.5a1 1 0 0 1 1-1h2.5l1 1H12a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+            <path d="M5 7.5h4M7.5 6L9 7.5 7.5 9" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
 
       {/* Trash icon — appears on row hover */}
       <button

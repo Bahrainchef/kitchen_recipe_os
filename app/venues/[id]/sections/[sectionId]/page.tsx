@@ -129,6 +129,7 @@ export default async function SectionPage({ params }: Props) {
           themeColor={venue.theme_color}
           countryCode={venue.country_code ?? undefined}
           photoMap={photoMap}
+          sections={sections}
         />
       </main>
     </div>

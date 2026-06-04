@@ -63,6 +63,9 @@ export default async function RecipePage({ params }: Props) {
         backLabel={backLabel}
         backHref={backHref}
         recipeId={recipeId}
+        venueId={id}
+        currentSectionId={sectionId}
+        sections={sections}
         themeColor={venue.theme_color}
         recipe={{
           title: recipe.title,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { RecipeEditModal } from '@/components/RecipeEditModal'
@@ -10,6 +10,9 @@ interface Props {
   backLabel: string
   backHref: string
   recipeId: string
+  venueId: string
+  currentSectionId: string
+  sections: { id: string; name: string }[]
   themeColor: string
   recipe: {
     title: string
@@ -22,12 +25,39 @@ interface Props {
   steps: RecipeStep[]
 }
 
-export function RecipeActionBar({ backLabel, backHref, recipeId, themeColor, recipe, ingredients, steps }: Props) {
+export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, currentSectionId, sections, themeColor, recipe, ingredients, steps }: Props) {
   const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [moveOpen, setMoveOpen] = useState(false)
+  const moveRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!moveOpen) return
+    const handler = (e: MouseEvent) => {
+      if (moveRef.current && !moveRef.current.contains(e.target as Node)) setMoveOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [moveOpen])
+
+  const handleMove = async (targetSectionId: string) => {
+    setMoveOpen(false)
+    const res = await fetch(`/api/recipes/${recipeId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ section_id: targetSectionId }),
+    })
+    if (res.ok) {
+      router.push(`/venues/${venueId}/sections/${targetSectionId}`)
+    } else {
+      setToast('Failed to move recipe')
+    }
+  }
+
+  const otherSections = sections.filter(s => s.id !== currentSectionId)
 
   useEffect(() => {
     if (!toast) return
@@ -116,6 +146,45 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, themeColor, rec
             </svg>
             <span className="hidden tablet:inline">Favourite</span>
           </button>
+
+          {/* Move to section */}
+          {otherSections.length > 0 && (
+            <div className="relative" ref={moveRef}>
+              <button
+                onClick={() => setMoveOpen(o => !o)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] active:scale-[0.97]"
+                style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M1 4.5a1 1 0 0 1 1-1h2.5l1 1H12a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                  <path d="M5 7.5h4M7.5 6L9 7.5 7.5 9" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="hidden tablet:inline">Move</span>
+              </button>
+
+              {moveOpen && (
+                <div
+                  className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 rounded-xl shadow-xl overflow-hidden z-[50]"
+                  style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.12)', minWidth: 188, maxHeight: 260, overflowY: 'auto' }}
+                >
+                  <p className="text-[10px] font-semibold tracking-[0.10em] uppercase px-3 pt-2.5 pb-1" style={{ color: '#9A9490' }}>
+                    Move to section
+                  </p>
+                  {otherSections.map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => handleMove(s.id)}
+                      className="w-full text-left px-3 py-2 text-[13px] transition-colors hover:bg-[rgba(26,23,20,0.05)]"
+                      style={{ color: '#1A1714' }}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                  <div className="pb-1.5" />
+                </div>
+              )}
+            </div>
+          )}
 
           <button
             disabled
