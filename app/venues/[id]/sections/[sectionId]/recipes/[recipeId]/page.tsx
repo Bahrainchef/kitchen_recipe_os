@@ -294,11 +294,15 @@ function NoSupabasePlaceholder({ venueName, venueId, sectionId, sectionName }: {
 }
 
 function formatQty(qty: number, unit: string | null): string {
+  const u = (unit ?? '').toLowerCase().trim()
+  if (u === 'ml') return String(Math.round(qty * 1000))
   return String(Math.round(qty))
 }
 
 function displayUnit(unit: string | null): string {
-  if (unit?.toLowerCase() === 'each') return 'each'
+  const u = (unit ?? '').toLowerCase().trim()
+  if (u === 'each' || u === 'pc') return u
+  if (u === 'ml') return 'ml'
   return 'gr'
 }
 
