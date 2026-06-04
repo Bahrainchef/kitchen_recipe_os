@@ -65,7 +65,9 @@ export async function getRecipesForSection(sectionId: string): Promise<Recipe[]>
     const supabase = db()
     const { data, error } = await supabase
       .from('recipes').select('*')
-      .eq('section_id', sectionId).order('title')
+      .eq('section_id', sectionId)
+      .order('sort_order', { ascending: true, nullsFirst: false })
+      .order('title')
     if (error) { console.error('[queries] getRecipesForSection:', error.message); return [] }
     return data ?? []
   } catch (e) { console.error('[queries] getRecipesForSection exception:', e); return [] }

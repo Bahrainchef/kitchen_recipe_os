@@ -148,6 +148,7 @@ export interface Recipe {
   venue_id: string
   section_id: string | null
   title: string
+  sort_order?: number
   description: string | null
   portion_size: number | null
   recipe_size: number

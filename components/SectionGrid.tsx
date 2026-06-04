@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Section, Recipe } from '@/lib/types/database.types'
 
 interface Props {
@@ -52,8 +54,89 @@ function getSectionIcon(name: string): string {
   return SECTION_ICONS[name.toLowerCase()] ?? '📋'
 }
 
+function DragHandle() {
+  return (
+    <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+      <circle cx="3"  cy="2.5"  r="1.3" />
+      <circle cx="7"  cy="2.5"  r="1.3" />
+      <circle cx="3"  cy="7"    r="1.3" />
+      <circle cx="7"  cy="7"    r="1.3" />
+      <circle cx="3"  cy="11.5" r="1.3" />
+      <circle cx="7"  cy="11.5" r="1.3" />
+    </svg>
+  )
+}
+
 export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
+  const router = useRouter()
   const recipeCount = (sectionId: string) => recipes.filter(r => r.section_id === sectionId).length
+
+  const [reorderMode, setReorderMode] = useState(false)
+  const [reorderItems, setReorderItems] = useState<Section[]>(sections)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const dragIdx = useRef<number>(-1)
+  const [dragOverIdx, setDragOverIdx] = useState<number>(-1)
+
+  const enterReorderMode = () => {
+    setReorderItems([...sections])
+    setSaveError(null)
+    setReorderMode(true)
+  }
+
+  const cancelReorder = () => {
+    setReorderItems([...sections])
+    setReorderMode(false)
+    setSaveError(null)
+  }
+
+  const moveUp = (idx: number) => {
+    if (idx === 0) return
+    setReorderItems(prev => {
+      const next = [...prev]
+      ;[next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]
+      return next
+    })
+  }
+
+  const moveDown = (idx: number) => {
+    setReorderItems(prev => {
+      if (idx >= prev.length - 1) return prev
+      const next = [...prev]
+      ;[next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]
+      return next
+    })
+  }
+
+  const handleDrop = (toIdx: number) => {
+    const fromIdx = dragIdx.current
+    if (fromIdx === -1 || fromIdx === toIdx) { dragIdx.current = -1; setDragOverIdx(-1); return }
+    setReorderItems(prev => {
+      const next = [...prev]
+      const [moved] = next.splice(fromIdx, 1)
+      next.splice(toIdx, 0, moved)
+      return next
+    })
+    dragIdx.current = -1
+    setDragOverIdx(-1)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaveError(null)
+    const res = await fetch('/api/sections/reorder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: reorderItems.map((s, i) => ({ id: s.id, sort_order: i + 1 })) }),
+    })
+    setSaving(false)
+    if (res.ok) {
+      setReorderMode(false)
+      router.refresh()
+    } else {
+      setSaveError('Failed to save order — please try again')
+    }
+  }
 
   if (sections.length === 0) {
     return (
@@ -69,87 +152,198 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
+      {/* Header row */}
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
         <h2 className="font-fraunces text-[20px] text-text-primary">Sections</h2>
         <div className="flex-1 h-px" style={{ background: 'rgba(26,23,20,0.09)' }} />
-        <span className="text-[12px] text-text-muted">{sections.length} total</span>
-      </div>
 
-      <div className="grid grid-cols-2 tablet:grid-cols-3 desktop:grid-cols-4 gap-4">
-        {sections.map((section, i) => {
-          const count = recipeCount(section.id)
-          const icon = getSectionIcon(section.name)
-
-          return (
-            <Link
-              key={section.id}
-              href={`/venues/${venueId}/sections/${section.id}`}
-              className="section-card group relative overflow-hidden rounded-card bg-white text-left anim-fade-up block"
-              style={{
-                border: '1px solid rgba(26,23,20,0.09)',
-                animationDelay: `${i * 50}ms`,
-                minHeight: 160,
-              }}
+        {reorderMode ? (
+          <>
+            <span className="text-[12px] text-text-muted">Drag or use arrows to reorder</span>
+            <button
+              onClick={cancelReorder}
+              disabled={saving}
+              className="px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] disabled:opacity-50"
+              style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
             >
-              {/* Coloured top stripe — widens on hover */}
-              <div
-                className="w-full transition-all duration-300 group-hover:h-[4px]"
-                style={{ height: 3, background: themeColor }}
-              />
-
-              {/* Hover tint */}
-              <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                style={{ background: `linear-gradient(160deg, ${themeColor}09 0%, transparent 65%)` }}
-              />
-
-              {/* Recipe count badge — top right */}
-              <div className="absolute top-3 right-3">
-                <span
-                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                  style={{ background: `${themeColor}18`, color: themeColor, border: `1px solid ${themeColor}28` }}
-                >
-                  {count}
-                </span>
-              </div>
-
-              {/* Card content */}
-              <div className="relative flex flex-col items-center justify-center text-center px-4 pt-6 pb-7 gap-3">
-                {/* Large emoji */}
-                <span
-                  className="text-[48px] leading-none transition-transform duration-300 group-hover:scale-110 select-none"
-                  style={{ display: 'inline-block' }}
-                >
-                  {icon}
-                </span>
-
-                {/* Section name */}
-                <h3
-                  className="font-fraunces leading-tight text-text-primary"
-                  style={{ fontSize: section.name.length > 14 ? 13 : 14 }}
-                >
-                  {section.name}
-                </h3>
-
-                {/* Recipe count label */}
-                <span className="text-[11px] text-text-muted">
-                  {count} {count === 1 ? 'recipe' : 'recipes'}
-                </span>
-              </div>
-
-              {/* Arrow — appears on hover, bottom right */}
-              <div
-                className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-1 group-hover:translate-x-0"
-                style={{ color: themeColor }}
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            </Link>
-          )
-        })}
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-3 py-1.5 rounded-full text-[13px] font-semibold transition-all hover:opacity-85 disabled:opacity-60"
+              style={{ background: themeColor, color: '#FFFFFF' }}
+            >
+              {saving ? 'Saving…' : 'Save order'}
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="text-[12px] text-text-muted">{sections.length} total</span>
+            <button
+              onClick={enterReorderMode}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] active:scale-[0.97]"
+              style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <path d="M2 4h9M2 6.5h9M2 9h9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <path d="M10.5 2.5l1.5 1.5-1.5 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10.5 7.5l1.5 1.5-1.5 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Reorder sections
+            </button>
+          </>
+        )}
       </div>
+
+      {saveError && (
+        <p className="text-[13px] mb-4" style={{ color: '#dc2626' }}>{saveError}</p>
+      )}
+
+      {reorderMode ? (
+        /* ── Reorder list ── */
+        <div className="space-y-2">
+          {reorderItems.map((section, idx) => {
+            const count = recipeCount(section.id)
+            const isDragOver = dragOverIdx === idx && dragIdx.current !== idx
+
+            return (
+              <div
+                key={section.id}
+                draggable
+                onDragStart={e => {
+                  dragIdx.current = idx
+                  e.dataTransfer.effectAllowed = 'move'
+                }}
+                onDragOver={e => {
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = 'move'
+                  if (dragOverIdx !== idx) setDragOverIdx(idx)
+                }}
+                onDrop={e => { e.preventDefault(); handleDrop(idx) }}
+                onDragEnd={() => { dragIdx.current = -1; setDragOverIdx(-1) }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl select-none"
+                style={{
+                  background: isDragOver ? `${themeColor}10` : '#FFFFFF',
+                  border: `1.5px solid ${isDragOver ? themeColor + '55' : 'rgba(26,23,20,0.09)'}`,
+                  cursor: 'grab',
+                  transition: 'border-color 0.1s, background 0.1s',
+                }}
+              >
+                {/* Drag handle */}
+                <div className="shrink-0 cursor-grab" style={{ color: '#B0A89E' }}>
+                  <DragHandle />
+                </div>
+
+                {/* Emoji */}
+                <span className="text-[26px] leading-none shrink-0 select-none">
+                  {getSectionIcon(section.name)}
+                </span>
+
+                {/* Name + count */}
+                <div className="flex-1 min-w-0">
+                  <span className="font-fraunces text-[14px] text-text-primary">{section.name}</span>
+                  <span className="text-[12px] text-text-muted ml-2">{count} {count === 1 ? 'recipe' : 'recipes'}</span>
+                </div>
+
+                {/* ↑ ↓ buttons */}
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => moveUp(idx)}
+                    disabled={idx === 0}
+                    draggable={false}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-[rgba(26,23,20,0.07)] disabled:opacity-25"
+                    style={{ color: '#1A1714', lineHeight: 1 }}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    onClick={() => moveDown(idx)}
+                    disabled={idx === reorderItems.length - 1}
+                    draggable={false}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-[rgba(26,23,20,0.07)] disabled:opacity-25"
+                    style={{ color: '#1A1714', lineHeight: 1 }}
+                  >
+                    ↓
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        /* ── Normal section grid ── */
+        <div className="grid grid-cols-2 tablet:grid-cols-3 desktop:grid-cols-4 gap-4">
+          {sections.map((section, i) => {
+            const count = recipeCount(section.id)
+            const icon = getSectionIcon(section.name)
+
+            return (
+              <Link
+                key={section.id}
+                href={`/venues/${venueId}/sections/${section.id}`}
+                className="section-card group relative overflow-hidden rounded-card bg-white text-left anim-fade-up block"
+                style={{
+                  border: '1px solid rgba(26,23,20,0.09)',
+                  animationDelay: `${i * 50}ms`,
+                  minHeight: 160,
+                }}
+              >
+                {/* Coloured top stripe */}
+                <div
+                  className="w-full transition-all duration-300 group-hover:h-[4px]"
+                  style={{ height: 3, background: themeColor }}
+                />
+
+                {/* Hover tint */}
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style={{ background: `linear-gradient(160deg, ${themeColor}09 0%, transparent 65%)` }}
+                />
+
+                {/* Recipe count badge */}
+                <div className="absolute top-3 right-3">
+                  <span
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                    style={{ background: `${themeColor}18`, color: themeColor, border: `1px solid ${themeColor}28` }}
+                  >
+                    {count}
+                  </span>
+                </div>
+
+                {/* Card content */}
+                <div className="relative flex flex-col items-center justify-center text-center px-4 pt-6 pb-7 gap-3">
+                  <span
+                    className="text-[48px] leading-none transition-transform duration-300 group-hover:scale-110 select-none"
+                    style={{ display: 'inline-block' }}
+                  >
+                    {icon}
+                  </span>
+                  <h3
+                    className="font-fraunces leading-tight text-text-primary"
+                    style={{ fontSize: section.name.length > 14 ? 13 : 14 }}
+                  >
+                    {section.name}
+                  </h3>
+                  <span className="text-[11px] text-text-muted">
+                    {count} {count === 1 ? 'recipe' : 'recipes'}
+                  </span>
+                </div>
+
+                {/* Arrow on hover */}
+                <div
+                  className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-1 group-hover:translate-x-0"
+                  style={{ color: themeColor }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

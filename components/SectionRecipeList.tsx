@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Recipe } from '@/lib/types/database.types'
 
@@ -81,6 +81,75 @@ export function SectionRecipeList({
   const [moving, setMoving] = useState(false)
   const [listToast, setListToast] = useState<string | null>(null)
 
+  // Recipe reorder state
+  const [reorderMode, setReorderMode] = useState(false)
+  const [reorderItems, setReorderItems] = useState<Recipe[]>(recipes)
+  const [savingOrder, setSavingOrder] = useState(false)
+  const [orderError, setOrderError] = useState<string | null>(null)
+  const dragIdx = useRef<number>(-1)
+  const [dragOverIdx, setDragOverIdx] = useState<number>(-1)
+
+  const enterReorderMode = () => {
+    setReorderItems([...recipes])
+    setOrderError(null)
+    setSearch('')
+    setReorderMode(true)
+  }
+
+  const cancelReorder = () => {
+    setReorderItems([...recipes])
+    setReorderMode(false)
+    setOrderError(null)
+  }
+
+  const moveUpRecipe = (idx: number) => {
+    if (idx === 0) return
+    setReorderItems(prev => {
+      const next = [...prev]
+      ;[next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]
+      return next
+    })
+  }
+
+  const moveDownRecipe = (idx: number) => {
+    setReorderItems(prev => {
+      if (idx >= prev.length - 1) return prev
+      const next = [...prev]
+      ;[next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]
+      return next
+    })
+  }
+
+  const handleRecipeDrop = (toIdx: number) => {
+    const fromIdx = dragIdx.current
+    if (fromIdx === -1 || fromIdx === toIdx) { dragIdx.current = -1; setDragOverIdx(-1); return }
+    setReorderItems(prev => {
+      const next = [...prev]
+      const [moved] = next.splice(fromIdx, 1)
+      next.splice(toIdx, 0, moved)
+      return next
+    })
+    dragIdx.current = -1
+    setDragOverIdx(-1)
+  }
+
+  const handleSaveOrder = async () => {
+    setSavingOrder(true)
+    setOrderError(null)
+    const res = await fetch('/api/recipes/reorder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: reorderItems.map((r, i) => ({ id: r.id, sort_order: i + 1 })) }),
+    })
+    setSavingOrder(false)
+    if (res.ok) {
+      setReorderMode(false)
+      router.refresh()
+    } else {
+      setOrderError('Failed to save order — please try again')
+    }
+  }
+
   useEffect(() => {
     if (!listToast) return
     const t = setTimeout(() => setListToast(null), 3000)
@@ -147,71 +216,183 @@ export function SectionRecipeList({
           <h2 className="font-fraunces text-[20px] text-text-primary">Recipes</h2>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Search */}
-          <div className="relative">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-              <circle cx="5.5" cy="5.5" r="4" stroke="#9A9490" strokeWidth="1.2" />
-              <path d="M9 9l2 2" stroke="#9A9490" strokeWidth="1.2" strokeLinecap="round" />
-            </svg>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search recipes…"
-              className="pl-8 pr-3 py-1.5 text-[13px] rounded-lg"
-              style={{
-                background: '#FFFFFF',
-                border: '1px solid rgba(26,23,20,0.14)',
-                color: '#1A1714',
-                width: 200,
-                outline: 'none',
-              }}
-            />
-          </div>
-
-          {/* View toggle */}
-          <div className="flex items-center gap-0.5 p-0.5 rounded-lg" style={{ background: 'rgba(26,23,20,0.07)' }}>
+        {reorderMode ? (
+          /* Reorder toolbar */
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-[12px] text-text-muted">Drag or use arrows to reorder</span>
             <button
-              onClick={() => setViewMode('list')}
-              aria-label="List view"
-              className="w-8 h-7 flex items-center justify-center rounded transition-colors"
-              style={{ background: view === 'list' ? '#FFFFFF' : 'transparent', color: view === 'list' ? '#1A1714' : '#9A9490', boxShadow: view === 'list' ? '0 1px 2px rgba(26,23,20,0.10)' : 'none' }}
+              onClick={cancelReorder}
+              disabled={savingOrder}
+              className="px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] disabled:opacity-50"
+              style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M2 3.5h10M2 7h10M2 10.5h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
+              Cancel
             </button>
             <button
-              onClick={() => setViewMode('grid')}
-              aria-label="Grid view"
-              className="w-8 h-7 flex items-center justify-center rounded transition-colors"
-              style={{ background: view === 'grid' ? '#FFFFFF' : 'transparent', color: view === 'grid' ? '#1A1714' : '#9A9490', boxShadow: view === 'grid' ? '0 1px 2px rgba(26,23,20,0.10)' : 'none' }}
+              onClick={handleSaveOrder}
+              disabled={savingOrder}
+              className="px-3 py-1.5 rounded-full text-[13px] font-semibold transition-all hover:opacity-85 disabled:opacity-60"
+              style={{ background: themeColor, color: '#FFFFFF' }}
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <rect x="1.5" y="1.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.3" />
-                <rect x="8" y="1.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.3" />
-                <rect x="1.5" y="8" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.3" />
-                <rect x="8" y="8" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.3" />
-              </svg>
+              {savingOrder ? 'Saving…' : 'Save order'}
             </button>
           </div>
+        ) : (
+          /* Normal toolbar */
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                <circle cx="5.5" cy="5.5" r="4" stroke="#9A9490" strokeWidth="1.2" />
+                <path d="M9 9l2 2" stroke="#9A9490" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search recipes…"
+                className="pl-8 pr-3 py-1.5 text-[13px] rounded-lg"
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid rgba(26,23,20,0.14)',
+                  color: '#1A1714',
+                  width: 200,
+                  outline: 'none',
+                }}
+              />
+            </div>
 
-          {/* Import button */}
-          <Link
-            href={`/import?venueId=${venueId}&sectionId=${sectionId}`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-opacity hover:opacity-80 shrink-0"
-            style={{ background: themeColor, color: '#FFFFFF' }}
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M6 1v7M3 5l3 3 3-3M1 10h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Import
-          </Link>
-        </div>
+            {/* View toggle */}
+            <div className="flex items-center gap-0.5 p-0.5 rounded-lg" style={{ background: 'rgba(26,23,20,0.07)' }}>
+              <button
+                onClick={() => setViewMode('list')}
+                aria-label="List view"
+                className="w-8 h-7 flex items-center justify-center rounded transition-colors"
+                style={{ background: view === 'list' ? '#FFFFFF' : 'transparent', color: view === 'list' ? '#1A1714' : '#9A9490', boxShadow: view === 'list' ? '0 1px 2px rgba(26,23,20,0.10)' : 'none' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 3.5h10M2 7h10M2 10.5h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                aria-label="Grid view"
+                className="w-8 h-7 flex items-center justify-center rounded transition-colors"
+                style={{ background: view === 'grid' ? '#FFFFFF' : 'transparent', color: view === 'grid' ? '#1A1714' : '#9A9490', boxShadow: view === 'grid' ? '0 1px 2px rgba(26,23,20,0.10)' : 'none' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <rect x="1.5" y="1.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                  <rect x="8" y="1.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                  <rect x="1.5" y="8" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                  <rect x="8" y="8" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Reorder button */}
+            {recipes.length > 1 && (
+              <button
+                onClick={enterReorderMode}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-opacity hover:opacity-80 shrink-0"
+                style={{ background: 'rgba(26,23,20,0.07)', color: '#1A1714', border: '1px solid rgba(26,23,20,0.11)' }}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 3.5h8M2 6h8M2 8.5h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  <path d="M9.5 1.5l1.5 2-1.5 2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M9.5 6.5l1.5 2-1.5 2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Reorder
+              </button>
+            )}
+
+            {/* Import button */}
+            <Link
+              href={`/import?venueId=${venueId}&sectionId=${sectionId}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-opacity hover:opacity-80 shrink-0"
+              style={{ background: themeColor, color: '#FFFFFF' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M6 1v7M3 5l3 3 3-3M1 10h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Import
+            </Link>
+          </div>
+        )}
       </div>
 
+      {orderError && (
+        <p className="text-[13px] mb-4" style={{ color: '#dc2626' }}>{orderError}</p>
+      )}
+
       {/* Content */}
-      {recipes.length === 0 ? (
+      {reorderMode ? (
+        /* ── Recipe reorder list ── */
+        <div className="rounded-card overflow-hidden space-y-2" style={{ background: 'transparent' }}>
+          {reorderItems.map((recipe, idx) => {
+            const isDragOver = dragOverIdx === idx && dragIdx.current !== idx
+            const s = STATUS_STYLES[recipe.status] ?? STATUS_STYLES.draft
+            return (
+              <div
+                key={recipe.id}
+                draggable
+                onDragStart={e => { dragIdx.current = idx; e.dataTransfer.effectAllowed = 'move' }}
+                onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOverIdx !== idx) setDragOverIdx(idx) }}
+                onDrop={e => { e.preventDefault(); handleRecipeDrop(idx) }}
+                onDragEnd={() => { dragIdx.current = -1; setDragOverIdx(-1) }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl select-none"
+                style={{
+                  background: isDragOver ? `${themeColor}10` : '#FFFFFF',
+                  border: `1.5px solid ${isDragOver ? themeColor + '55' : 'rgba(26,23,20,0.09)'}`,
+                  cursor: 'grab',
+                  transition: 'border-color 0.1s, background 0.1s',
+                }}
+              >
+                {/* Drag handle */}
+                <div className="shrink-0 cursor-grab" style={{ color: '#B0A89E' }}>
+                  <RecipeDragHandle />
+                </div>
+
+                {/* Status dot */}
+                <div className="shrink-0 w-2 h-2 rounded-full" style={{ background: s.dot }} />
+
+                {/* Title */}
+                <span className="font-fraunces text-[14px] text-text-primary flex-1 min-w-0 truncate">
+                  {recipe.title}
+                </span>
+
+                {/* Status badge */}
+                <span
+                  className="text-[11px] font-medium px-2 py-0.5 rounded shrink-0"
+                  style={{ background: s.bg, color: s.text }}
+                >
+                  {s.label}
+                </span>
+
+                {/* ↑ ↓ buttons */}
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => moveUpRecipe(idx)}
+                    disabled={idx === 0}
+                    draggable={false}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-[rgba(26,23,20,0.07)] disabled:opacity-25"
+                    style={{ color: '#1A1714', lineHeight: 1 }}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    onClick={() => moveDownRecipe(idx)}
+                    disabled={idx === reorderItems.length - 1}
+                    draggable={false}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-[rgba(26,23,20,0.07)] disabled:opacity-25"
+                    style={{ color: '#1A1714', lineHeight: 1 }}
+                  >
+                    ↓
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : recipes.length === 0 ? (
         <EmptyState venueId={venueId} sectionId={sectionId} themeColor={themeColor} />
       ) : filtered.length === 0 ? (
         <NoResults search={search} />
@@ -546,6 +727,19 @@ function RecipeRow({
         </svg>
       </button>
     </div>
+  )
+}
+
+function RecipeDragHandle() {
+  return (
+    <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+      <circle cx="3"  cy="2.5"  r="1.3" />
+      <circle cx="7"  cy="2.5"  r="1.3" />
+      <circle cx="3"  cy="7"    r="1.3" />
+      <circle cx="7"  cy="7"    r="1.3" />
+      <circle cx="3"  cy="11.5" r="1.3" />
+      <circle cx="7"  cy="11.5" r="1.3" />
+    </svg>
   )
 }
 
