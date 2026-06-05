@@ -298,15 +298,16 @@ function NoSupabasePlaceholder({ venueName, venueId, sectionId, sectionName }: {
 
 function formatQty(qty: number, unit: string | null): string {
   const u = (unit ?? '').toLowerCase().trim()
+  // ml is stored as decimal litres (0.015 L → display 15 ml)
+  // gr is already stored as whole grams by the import parser — no scaling needed here
+  // all other units (each, pc, piece, portion, …) are whole numbers
   if (u === 'ml') return String(Math.round(qty * 1000))
   return String(Math.round(qty))
 }
 
 function displayUnit(unit: string | null): string {
-  const u = (unit ?? '').toLowerCase().trim()
-  if (u === 'each' || u === 'pc') return u
-  if (u === 'ml') return 'ml'
-  return 'gr'
+  // Show exactly what is stored — no fallback to 'gr'
+  return unit?.trim() ?? ''
 }
 
 function costColor(pct: number | null): string {

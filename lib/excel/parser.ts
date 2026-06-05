@@ -110,14 +110,15 @@ export function parseSheet(sheet: XLSXSheet, tabName: string, venues: Venue[]): 
 
   for (let row = 10; row <= 35; row++) {
     const quantityRaw = cellNum(sheet, `A${row}`)
-    const unit        = cellStr(sheet, `B${row}`) || null
+    const unitRaw     = cellStr(sheet, `B${row}`)
+    const unit        = unitRaw ? unitRaw.toLowerCase() : null   // normalise: 'Each' → 'each', 'GR' → 'gr'
     const raw         = cellStr(sheet, `C${row}`)
 
     // Skip rows with no ingredient name — empty filler rows in the template
     if (!raw) continue
 
     // Sub-recipe heading: B is "unit" and C is ALL CAPS (e.g. "BREAKFAST SAUSAGE PATTY")
-    if (unit?.toLowerCase() === 'unit' && isAllCaps(raw)) {
+    if (unit === 'unit' && isAllCaps(raw)) {
       currentGroup = raw
       continue
     }
