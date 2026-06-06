@@ -142,7 +142,7 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
     return (
       <div
         className="rounded-card px-8 py-16 text-center"
-        style={{ border: '1px dashed rgba(26,23,20,0.15)', background: 'rgba(26,23,20,0.02)' }}
+        style={{ border: '1px dashed rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.03)' }}
       >
         <p className="font-fraunces text-[18px] text-text-primary mb-1">No sections yet</p>
         <p className="text-text-muted text-[14px]">Configure sections for this venue in the database.</p>
@@ -155,7 +155,7 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
       {/* Header row */}
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <h2 className="font-fraunces text-[20px] text-text-primary">Sections</h2>
-        <div className="flex-1 h-px" style={{ background: 'rgba(26,23,20,0.09)' }} />
+        <div className="flex-1 h-px" style={{ background: 'rgba(126,184,247,0.08)' }} />
 
         {reorderMode ? (
           <>
@@ -163,8 +163,7 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
             <button
               onClick={cancelReorder}
               disabled={saving}
-              className="px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] disabled:opacity-50"
-              style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
+              className="btn-ghost text-[13px] disabled:opacity-50"
             >
               Cancel
             </button>
@@ -182,8 +181,7 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
             <span className="text-[12px] text-text-muted">{sections.length} total</span>
             <button
               onClick={enterReorderMode}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] active:scale-[0.97]"
-              style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
+              className="btn-ghost flex items-center gap-1.5 text-[13px]"
             >
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                 <path d="M2 4h9M2 6.5h9M2 9h9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -224,14 +222,14 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
                 onDragEnd={() => { dragIdx.current = -1; setDragOverIdx(-1) }}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl select-none"
                 style={{
-                  background: isDragOver ? `${themeColor}10` : '#FFFFFF',
-                  border: `1.5px solid ${isDragOver ? themeColor + '55' : 'rgba(26,23,20,0.09)'}`,
+                  background: isDragOver ? `${themeColor}18` : '#122347',
+                  border: `1.5px solid ${isDragOver ? themeColor + '66' : 'rgba(126,184,247,0.10)'}`,
                   cursor: 'grab',
                   transition: 'border-color 0.1s, background 0.1s',
                 }}
               >
                 {/* Drag handle */}
-                <div className="shrink-0 cursor-grab" style={{ color: '#B0A89E' }}>
+                <div className="shrink-0 cursor-grab" style={{ color: 'rgba(255,255,255,0.28)' }}>
                   <DragHandle />
                 </div>
 
@@ -252,8 +250,8 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
                     onClick={() => moveUp(idx)}
                     disabled={idx === 0}
                     draggable={false}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-[rgba(26,23,20,0.07)] disabled:opacity-25"
-                    style={{ color: '#1A1714', lineHeight: 1 }}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-white/10 disabled:opacity-25"
+                    style={{ color: 'rgba(255,255,255,0.70)', lineHeight: 1 }}
                   >
                     ↑
                   </button>
@@ -261,8 +259,8 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
                     onClick={() => moveDown(idx)}
                     disabled={idx === reorderItems.length - 1}
                     draggable={false}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-[rgba(26,23,20,0.07)] disabled:opacity-25"
-                    style={{ color: '#1A1714', lineHeight: 1 }}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-white/10 disabled:opacity-25"
+                    style={{ color: 'rgba(255,255,255,0.70)', lineHeight: 1 }}
                   >
                     ↓
                   </button>
@@ -282,57 +280,73 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
               <Link
                 key={section.id}
                 href={`/venues/${venueId}/sections/${section.id}`}
-                className="section-card group relative overflow-hidden rounded-card bg-white text-left anim-fade-up block"
+                className="section-card group relative overflow-hidden rounded-card text-left anim-fade-up block"
                 style={{
-                  border: '1px solid rgba(26,23,20,0.09)',
-                  animationDelay: `${i * 50}ms`,
-                  minHeight: 160,
-                }}
+                  background: '#1A2F5E',
+                  border: '1px solid rgba(126,184,247,0.10)',
+                  animationDelay: `${i * 45}ms`,
+                  minHeight: 185,
+                  '--theme-color': themeColor,
+                } as React.CSSProperties}
               >
+                {/* Gradient background wash — subtle on default, richer on hover */}
+                <div
+                  className="absolute inset-0 transition-opacity duration-300 pointer-events-none opacity-100"
+                  style={{
+                    background: `linear-gradient(145deg, ${themeColor}0B 0%, transparent 60%)`,
+                  }}
+                />
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style={{
+                    background: `linear-gradient(145deg, ${themeColor}18 0%, transparent 65%)`,
+                  }}
+                />
+
                 {/* Coloured top stripe */}
                 <div
                   className="w-full transition-all duration-300 group-hover:h-[4px]"
                   style={{ height: 3, background: themeColor }}
                 />
 
-                {/* Hover tint */}
-                <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                  style={{ background: `linear-gradient(160deg, ${themeColor}09 0%, transparent 65%)` }}
-                />
-
                 {/* Recipe count badge */}
-                <div className="absolute top-3 right-3">
+                <div className="absolute top-3.5 right-3.5">
                   <span
-                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                    style={{ background: `${themeColor}18`, color: themeColor, border: `1px solid ${themeColor}28` }}
+                    className="text-[11px] font-bold px-2 py-0.5 rounded-full tabular-nums"
+                    style={{
+                      background: `${themeColor}20`,
+                      color: themeColor,
+                      border: `1px solid ${themeColor}30`,
+                    }}
                   >
                     {count}
                   </span>
                 </div>
 
                 {/* Card content */}
-                <div className="relative flex flex-col items-center justify-center text-center px-4 pt-6 pb-7 gap-3">
+                <div className="relative flex flex-col items-center justify-center text-center px-4 pt-7 pb-8 gap-3">
                   <span
-                    className="text-[48px] leading-none transition-transform duration-300 group-hover:scale-110 select-none"
-                    style={{ display: 'inline-block' }}
+                    className="text-[52px] leading-none transition-transform duration-300 group-hover:scale-110 select-none"
+                    style={{ display: 'inline-block', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.45))' }}
                   >
                     {icon}
                   </span>
-                  <h3
-                    className="font-fraunces leading-tight text-text-primary"
-                    style={{ fontSize: section.name.length > 14 ? 13 : 14 }}
-                  >
-                    {section.name}
-                  </h3>
-                  <span className="text-[11px] text-text-muted">
-                    {count} {count === 1 ? 'recipe' : 'recipes'}
-                  </span>
+                  <div>
+                    <h3
+                      className="font-fraunces leading-tight text-text-primary mb-1"
+                      style={{ fontSize: section.name.length > 16 ? 12 : section.name.length > 12 ? 13 : 14 }}
+                    >
+                      {section.name}
+                    </h3>
+                    <span className="text-[11px] text-text-muted">
+                      {count} {count === 1 ? 'recipe' : 'recipes'}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Arrow on hover */}
+                {/* Arrow — slides in on hover */}
                 <div
-                  className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-1 group-hover:translate-x-0"
+                  className="absolute bottom-3.5 right-3.5 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-1.5 group-hover:translate-x-0"
                   style={{ color: themeColor }}
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

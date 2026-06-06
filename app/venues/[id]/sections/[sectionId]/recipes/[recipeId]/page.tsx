@@ -111,7 +111,7 @@ export default async function RecipePage({ params }: Props) {
             </div>
           )}
 
-          <div className="h-px mb-8" style={{ background: 'rgba(26,23,20,0.09)' }} />
+          <div className="h-px mb-8" style={{ background: 'rgba(126,184,247,0.10)' }} />
 
           <div className="grid tablet:grid-cols-[1fr_260px] gap-8 tablet:gap-12">
 
@@ -130,7 +130,7 @@ export default async function RecipePage({ params }: Props) {
                         {showHeader && (
                           <>
                             {prevHasNamedGroup && (
-                              <div className="h-px mb-3 mt-1" style={{ background: 'rgba(26,23,20,0.10)' }} />
+                              <div className="h-px mb-3 mt-1" style={{ background: 'rgba(126,184,247,0.10)' }} />
                             )}
                             <div
                               className="text-[11px] font-bold tracking-[0.12em] uppercase mb-2"
@@ -143,7 +143,7 @@ export default async function RecipePage({ params }: Props) {
                         <table className="w-full">
                           <tbody>
                             {ings.map(ing => (
-                              <tr key={ing.id} className="border-b" style={{ borderColor: 'rgba(26,23,20,0.05)' }}>
+                              <tr key={ing.id} className="border-b" style={{ borderColor: 'rgba(126,184,247,0.08)' }}>
                                 <td className="py-2.5 pr-2 text-[14px] text-text-muted tabular-nums w-14 text-right align-top">
                                   {ing.quantity != null ? formatQty(ing.quantity, ing.unit) : '—'}
                                 </td>
@@ -195,7 +195,7 @@ export default async function RecipePage({ params }: Props) {
               {hasCosts && (
                 <div
                   className="rounded-card p-5 sticky top-6 mb-4"
-                  style={{ border: '1px solid rgba(26,23,20,0.09)', background: '#FFFFFF' }}
+                  style={{ border: '1px solid rgba(126,184,247,0.12)', background: '#1A2F5E' }}
                 >
                   <SectionHeading color={venue.theme_color}>Cost</SectionHeading>
                   <div className="space-y-2 text-[13px]">
@@ -203,11 +203,11 @@ export default async function RecipePage({ params }: Props) {
                     {recipe.misc_cost_pct && (
                       <CostRow label={`Misc (${(recipe.misc_cost_pct * 100).toFixed(0)}%)`} value={fmt(recipe.misc_cost_amount)} />
                     )}
-                    <div className="h-px my-2" style={{ background: 'rgba(26,23,20,0.09)' }} />
+                    <div className="h-px my-2" style={{ background: 'rgba(126,184,247,0.10)' }} />
                     <CostRow label="Total cost" value={fmt(recipe.total_cost)} bold />
                     {recipe.portion_size && <CostRow label="Portions" value={String(recipe.portion_size)} />}
                     <CostRow label="Per portion" value={fmt(recipe.cost_per_portion)} />
-                    <div className="h-px my-2" style={{ background: 'rgba(26,23,20,0.09)' }} />
+                    <div className="h-px my-2" style={{ background: 'rgba(126,184,247,0.10)' }} />
                     <CostRow label="Selling price" value={fmt(recipe.selling_price)} />
                     <CostRow
                       label="Food cost %"
@@ -221,7 +221,7 @@ export default async function RecipePage({ params }: Props) {
 
               <div
                 className="rounded-card p-5"
-                style={{ border: '1px solid rgba(26,23,20,0.09)', background: '#FFFFFF' }}
+                style={{ border: '1px solid rgba(126,184,247,0.12)', background: '#1A2F5E' }}
               >
                 <SectionHeading color={venue.theme_color}>Details</SectionHeading>
                 <div className="space-y-2 text-[13px]">
@@ -249,7 +249,7 @@ function SectionHeading({ children, color }: { children: React.ReactNode; color:
   return (
     <h2
       className="font-fraunces text-[17px] mb-4"
-      style={{ color: '#1A1714', borderBottom: `2px solid ${color}`, paddingBottom: 6, display: 'inline-block' }}
+      style={{ color: '#f0f4ff', borderBottom: `2px solid ${color}`, paddingBottom: 6, display: 'inline-block' }}
     >
       {children}
     </h2>
@@ -275,9 +275,9 @@ function NoSupabasePlaceholder({ venueName, venueId, sectionId, sectionName }: {
   return (
     <div className="min-h-screen bg-canvas flex items-center justify-center px-5">
       <div className="text-center max-w-md">
-        <div className="w-12 h-12 rounded-full bg-[rgba(26,23,20,0.06)] flex items-center justify-center mx-auto mb-4">
+        <div className="w-12 h-12 rounded-full bg-[rgba(126,184,247,0.08)] flex items-center justify-center mx-auto mb-4">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M10 2a8 8 0 1 0 0 16A8 8 0 0 0 10 2zm0 4v5m0 2v1" stroke="#9A9490" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M10 2a8 8 0 1 0 0 16A8 8 0 0 0 10 2zm0 4v5m0 2v1" stroke="rgba(240,244,255,0.40)" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </div>
         <h2 className="font-fraunces text-[22px] text-text-primary mb-2">Recipe not found</h2>
@@ -287,7 +287,7 @@ function NoSupabasePlaceholder({ venueName, venueId, sectionId, sectionName }: {
         <Link
           href={sectionId ? `/venues/${venueId}/sections/${sectionId}` : `/venues/${venueId}`}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold"
-          style={{ background: '#1A1714', color: '#FFFFFF' }}
+          style={{ background: '#122347', color: '#f0f4ff', border: '1px solid rgba(126,184,247,0.14)' }}
         >
           ← Back to {sectionName ?? venueName}
         </Link>
@@ -311,8 +311,8 @@ function displayUnit(unit: string | null): string {
 }
 
 function costColor(pct: number | null): string {
-  if (pct === null) return '#1A1714'
+  if (pct === null) return '#f0f4ff'
   if (pct < 0.25)  return '#15803d'
-  if (pct <= 0.35) return '#A07828'
+  if (pct <= 0.35) return '#6255CC'
   return '#dc2626'
 }

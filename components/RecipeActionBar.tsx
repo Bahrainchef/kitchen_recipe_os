@@ -84,23 +84,24 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, curren
     }
   }
 
+  const btnBase = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all active:scale-[0.97]'
+  const btnStyle = { background: 'rgba(18,35,71,0.90)', border: '1px solid rgba(126,184,247,0.14)', color: 'rgba(240,244,255,0.80)' }
+
   return (
     <>
       <div
-        className="sticky top-0 z-40 flex items-center gap-2 px-5 tablet:px-8 no-print"
+        className="sticky top-0 z-40 flex items-center gap-2 px-5 tablet:px-8 no-print glass-surface"
         style={{
           minHeight: 52,
-          background: 'rgba(248,244,238,0.96)',
-          backdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(26,23,20,0.09)',
-          boxShadow: '0 1px 3px rgba(26,23,20,0.05)',
+          borderBottom: '1px solid rgba(126,184,247,0.10)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.20)',
         }}
       >
         {/* Back */}
         <button
           onClick={() => router.push(backHref)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] active:scale-[0.97]"
-          style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
+          className={`${btnBase} hover:bg-white/10`}
+          style={btnStyle}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M9 3L4 7l5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -113,8 +114,8 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, curren
         <div className="flex items-center gap-1 flex-1 justify-center">
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] active:scale-[0.97]"
-            style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
+            className={`${btnBase} hover:bg-white/10`}
+            style={btnStyle}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M3.5 4.5v-3h7v3M3.5 10.5H2a.5.5 0 0 1-.5-.5V5.5A.5.5 0 0 1 2 5h10a.5.5 0 0 1 .5.5V10a.5.5 0 0 1-.5.5h-1.5" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
@@ -125,8 +126,8 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, curren
 
           <button
             onClick={() => setEditOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] active:scale-[0.97]"
-            style={{ background: '#FFFFFF', border: `1px solid ${themeColor}50`, color: themeColor }}
+            className={`${btnBase} hover:bg-white/10`}
+            style={{ background: 'rgba(18,35,71,0.90)', border: `1px solid ${themeColor}50`, color: themeColor }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M9.5 2.5 11.5 4.5 5 11H3V9l6.5-6.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
@@ -138,8 +139,8 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, curren
           <button
             disabled
             title="Coming soon"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium opacity-35 cursor-not-allowed"
-            style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
+            className={`${btnBase} opacity-35 cursor-not-allowed`}
+            style={btnStyle}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 12C7 12 1.5 8.5 1.5 5.5a2.75 2.75 0 0 1 5.5-.75 2.75 2.75 0 0 1 5.5.75C12.5 8.5 7 12 7 12z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
@@ -152,8 +153,8 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, curren
             <div className="relative" ref={moveRef}>
               <button
                 onClick={() => setMoveOpen(o => !o)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] active:scale-[0.97]"
-                style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
+                className={`${btnBase} hover:bg-white/10`}
+                style={btnStyle}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M1 4.5a1 1 0 0 1 1-1h2.5l1 1H12a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
@@ -165,17 +166,23 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, curren
               {moveOpen && (
                 <div
                   className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 rounded-xl shadow-xl overflow-hidden z-[50]"
-                  style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.12)', minWidth: 188, maxHeight: 260, overflowY: 'auto' }}
+                  style={{
+                    background: '#122347',
+                    border: '1px solid rgba(126,184,247,0.14)',
+                    minWidth: 188,
+                    maxHeight: 260,
+                    overflowY: 'auto',
+                  }}
                 >
-                  <p className="text-[10px] font-semibold tracking-[0.10em] uppercase px-3 pt-2.5 pb-1" style={{ color: '#9A9490' }}>
+                  <p className="text-[10px] font-semibold tracking-[0.10em] uppercase px-3 pt-2.5 pb-1" style={{ color: 'rgba(240,244,255,0.40)' }}>
                     Move to section
                   </p>
                   {otherSections.map(s => (
                     <button
                       key={s.id}
                       onClick={() => handleMove(s.id)}
-                      className="w-full text-left px-3 py-2 text-[13px] transition-colors hover:bg-[rgba(26,23,20,0.05)]"
-                      style={{ color: '#1A1714' }}
+                      className="w-full text-left px-3 py-2 text-[13px] transition-colors hover:bg-white/05"
+                      style={{ color: 'rgba(240,244,255,0.80)' }}
                     >
                       {s.name}
                     </button>
@@ -189,8 +196,8 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, curren
           <button
             disabled
             title="Coming soon"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium opacity-35 cursor-not-allowed"
-            style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
+            className={`${btnBase} opacity-35 cursor-not-allowed`}
+            style={btnStyle}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <rect x="2" y="1.5" width="10" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
@@ -201,8 +208,8 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, curren
 
           <button
             onClick={() => setDeleteConfirm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(220,38,38,0.08)] active:scale-[0.97]"
-            style={{ background: '#FFFFFF', border: '1px solid rgba(220,38,38,0.28)', color: '#dc2626' }}
+            className={`${btnBase} hover:bg-[rgba(220,38,38,0.12)]`}
+            style={{ background: 'rgba(18,35,71,0.90)', border: '1px solid rgba(220,38,38,0.28)', color: '#f87171' }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M2 3.5h10M5.5 3.5V2h3v1.5M3.5 3.5l.5 8.5h6l.5-8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -215,8 +222,8 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, curren
         {/* Home */}
         <Link
           href="/"
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] active:scale-[0.97]"
-          style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
+          className={`${btnBase} hover:bg-white/10`}
+          style={btnStyle}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M1.5 6.5L7 2l5.5 4.5V12.5a.5.5 0 0 1-.5.5H9V9H5v4H2a.5.5 0 0 1-.5-.5V6.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
@@ -229,7 +236,7 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, curren
       {toast && (
         <div
           className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 px-5 py-2.5 rounded-full text-[13px] font-semibold shadow-lg no-print"
-          style={{ background: '#1A1714', color: '#FFFFFF', pointerEvents: 'none' }}
+          style={{ background: '#122347', color: '#f0f4ff', border: '1px solid rgba(126,184,247,0.20)', pointerEvents: 'none' }}
         >
           ✓ {toast}
         </div>
@@ -252,32 +259,32 @@ export function RecipeActionBar({ backLabel, backHref, recipeId, venueId, curren
       {deleteConfirm && (
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center px-5 no-print"
-          style={{ background: 'rgba(26,23,20,0.55)' }}
+          style={{ background: 'rgba(0,0,0,0.70)', backdropFilter: 'blur(4px)' }}
           onClick={() => { if (!deleting) setDeleteConfirm(false) }}
         >
           <div
-            className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            className="rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            style={{ background: '#122347', border: '1px solid rgba(126,184,247,0.12)' }}
             onClick={e => e.stopPropagation()}
           >
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center mb-4"
-              style={{ background: 'rgba(220,38,38,0.10)' }}
+              style={{ background: 'rgba(220,38,38,0.15)' }}
             >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M2.5 4.5h13M7 4.5V3h4v1.5M4.5 4.5l.5 11h8l.5-11" stroke="#dc2626" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M7.5 8v5M10.5 8v5" stroke="#dc2626" strokeWidth="1.4" strokeLinecap="round" />
+                <path d="M2.5 4.5h13M7 4.5V3h4v1.5M4.5 4.5l.5 11h8l.5-11" stroke="#f87171" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M7.5 8v5M10.5 8v5" stroke="#f87171" strokeWidth="1.4" strokeLinecap="round" />
               </svg>
             </div>
             <h3 className="font-fraunces text-[20px] text-text-primary mb-2">Delete recipe?</h3>
             <p className="text-text-secondary text-[14px] leading-relaxed mb-6">
-              Are you sure you want to delete <strong>{recipe.title}</strong>? This cannot be undone.
+              Are you sure you want to delete <strong style={{ color: '#f0f4ff' }}>{recipe.title}</strong>? This cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setDeleteConfirm(false)}
                 disabled={deleting}
-                className="px-4 py-2 rounded-lg text-[13px] font-semibold transition-opacity hover:opacity-70 disabled:opacity-40"
-                style={{ background: 'rgba(26,23,20,0.07)', color: '#1A1714' }}
+                className="btn-ghost text-[13px] font-semibold disabled:opacity-40"
               >
                 Cancel
               </button>

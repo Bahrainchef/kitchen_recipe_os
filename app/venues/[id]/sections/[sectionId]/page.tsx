@@ -76,8 +76,8 @@ export default async function SectionPage({ params }: Props) {
       <div
         className="relative overflow-hidden"
         style={{
-          background: 'linear-gradient(to bottom, #EAE5DC, #F2EDE4)',
-          borderBottom: '1px solid rgba(26,23,20,0.10)',
+          background: '#1A2F5E',
+          borderBottom: '1px solid rgba(126,184,247,0.10)',
         }}
       >
         <div className="h-[3px] w-full" style={{ background: venue.theme_color }} />

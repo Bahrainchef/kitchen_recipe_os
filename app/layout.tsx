@@ -6,6 +6,7 @@ const fraunces = Fraunces({
   subsets: ['latin'],
   variable: '--font-fraunces',
   display: 'swap',
+  style: ['normal', 'italic'],
   axes: ['SOFT', 'WONK', 'opsz'],
 })
 
@@ -29,7 +30,7 @@ export const viewport: Viewport = {
   // Tablet-optimised — allow user to zoom in on recipe detail if needed
   minimumScale: 0.8,
   maximumScale: 2,
-  themeColor: '#0C0B0A',
+  themeColor: '#0B1F4A',
 }
 
 export default function RootLayout({

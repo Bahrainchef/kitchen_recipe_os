@@ -92,9 +92,9 @@ export function RecipePhotoUpload({ recipeId, initialPhotoUrl }: Props) {
       className="w-full flex flex-col items-center justify-center cursor-pointer transition-colors group"
       style={{
         height: 200,
-        border: '2px dashed rgba(26,23,20,0.18)',
+        border: '2px dashed rgba(126,184,247,0.18)',
         borderRadius: '0',
-        background: 'rgba(26,23,20,0.015)',
+        background: 'rgba(126,184,247,0.03)',
       }}
       onClick={() => inputRef.current?.click()}
       onDrop={onDrop}
@@ -103,11 +103,11 @@ export function RecipePhotoUpload({ recipeId, initialPhotoUrl }: Props) {
       <div className="flex flex-col items-center gap-3 pointer-events-none select-none">
         <div
           className="w-12 h-12 rounded-full flex items-center justify-center transition-colors group-hover:scale-110"
-          style={{ background: 'rgba(26,23,20,0.06)', border: '1.5px dashed rgba(26,23,20,0.20)' }}
+          style={{ background: 'rgba(126,184,247,0.08)', border: '1.5px dashed rgba(126,184,247,0.20)' }}
         >
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-            <circle cx="11" cy="11" r="3.5" stroke="#9A9490" strokeWidth="1.4" />
-            <path d="M2 15V16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8A2 2 0 0 0 18 6h-2.5L14 3.5H8L6.5 6H4A2 2 0 0 0 2 8v7z" stroke="#9A9490" strokeWidth="1.3" strokeLinejoin="round" />
+            <circle cx="11" cy="11" r="3.5" stroke="rgba(240,244,255,0.40)" strokeWidth="1.4" />
+            <path d="M2 15V16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8A2 2 0 0 0 18 6h-2.5L14 3.5H8L6.5 6H4A2 2 0 0 0 2 8v7z" stroke="rgba(240,244,255,0.40)" strokeWidth="1.3" strokeLinejoin="round" />
           </svg>
         </div>
         <div className="text-center">
@@ -129,8 +129,8 @@ export function RecipePhotoUpload({ recipeId, initialPhotoUrl }: Props) {
 
 function UploadSpinner() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(248,244,238,0.70)' }}>
-      <div className="w-8 h-8 rounded-full border-2 border-[rgba(26,23,20,0.12)] border-t-[#C8973A] animate-spin" />
+    <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(11,31,74,0.70)' }}>
+      <div className="w-8 h-8 rounded-full border-2 border-[rgba(126,184,247,0.20)] border-t-[#7eb8f7] animate-spin" />
     </div>
   )
 }

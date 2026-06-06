@@ -68,7 +68,7 @@ export function RecipeHero({
         ) : (
           <div
             className="absolute inset-0"
-            style={{ background: `linear-gradient(150deg, ${themeColor} 0%, rgba(26,23,20,0.92) 100%)` }}
+            style={{ background: `linear-gradient(150deg, ${themeColor} 0%, rgba(11,31,74,0.96) 100%)` }}
           />
         )}
 

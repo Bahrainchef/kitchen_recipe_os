@@ -6,18 +6,18 @@ import { useRouter } from 'next/navigation'
 import type { Recipe } from '@/lib/types/database.types'
 
 const STATUS_STYLES: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  draft:          { label: 'Draft',          bg: 'rgba(26,23,20,0.06)',   text: '#6E6560', dot: '#B0A89E' },
-  pending_review: { label: 'Pending review', bg: 'rgba(200,151,58,0.12)', text: '#A07828', dot: '#C8973A' },
-  published:      { label: 'Published',      bg: 'rgba(22,163,74,0.10)', text: '#15803d', dot: '#22c55e' },
-  archived:       { label: 'Archived',       bg: 'rgba(26,23,20,0.04)',   text: '#9A9490', dot: '#C8BFB4' },
+  draft:          { label: 'Draft',          bg: 'rgba(126,184,247,0.10)',  text: 'rgba(240,244,255,0.45)', dot: 'rgba(240,244,255,0.30)' },
+  pending_review: { label: 'Pending review', bg: 'rgba(167,139,250,0.14)',  text: '#a78bfa',                dot: '#a78bfa' },
+  published:      { label: 'Published',      bg: 'rgba(22,163,74,0.12)',    text: '#4ade80',                dot: '#4ade80' },
+  archived:       { label: 'Archived',       bg: 'rgba(126,184,247,0.06)',  text: 'rgba(240,244,255,0.30)', dot: 'rgba(240,244,255,0.20)' },
 }
 
 function costBadgeStyle(pct: number | null): { bg: string; text: string; label: string } | null {
   if (pct === null || pct <= 0) return null
   const p = pct * 100
-  if (pct < 0.25)  return { bg: 'rgba(22,163,74,0.12)',  text: '#15803d', label: `${p.toFixed(1)}%` }
-  if (pct <= 0.35) return { bg: 'rgba(200,151,58,0.15)', text: '#A07828', label: `${p.toFixed(1)}%` }
-  return              { bg: 'rgba(220,38,38,0.12)',  text: '#dc2626', label: `${p.toFixed(1)}%` }
+  if (pct < 0.25)  return { bg: 'rgba(22,163,74,0.12)',       text: '#4ade80', label: `${p.toFixed(1)}%` }
+  if (pct <= 0.35) return { bg: 'rgba(167,139,250,0.14)',     text: '#a78bfa', label: `${p.toFixed(1)}%` }
+  return              { bg: 'rgba(220,38,38,0.12)',            text: '#f87171', label: `${p.toFixed(1)}%` }
 }
 
 const SECTION_ICONS: Record<string, string> = {
@@ -81,7 +81,6 @@ export function SectionRecipeList({
   const [moving, setMoving] = useState(false)
   const [listToast, setListToast] = useState<string | null>(null)
 
-  // Recipe reorder state
   const [reorderMode, setReorderMode] = useState(false)
   const [reorderItems, setReorderItems] = useState<Recipe[]>(recipes)
   const [savingOrder, setSavingOrder] = useState(false)
@@ -217,14 +216,12 @@ export function SectionRecipeList({
         </div>
 
         {reorderMode ? (
-          /* Reorder toolbar */
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-[12px] text-text-muted">Drag or use arrows to reorder</span>
             <button
               onClick={cancelReorder}
               disabled={savingOrder}
-              className="px-3 py-1.5 rounded-full text-[13px] font-medium transition-all hover:bg-[rgba(26,23,20,0.06)] disabled:opacity-50"
-              style={{ background: '#FFFFFF', border: '1px solid rgba(26,23,20,0.13)', color: '#1A1714' }}
+              className="btn-ghost text-[13px] disabled:opacity-50"
             >
               Cancel
             </button>
@@ -238,13 +235,12 @@ export function SectionRecipeList({
             </button>
           </div>
         ) : (
-          /* Normal toolbar */
           <div className="flex items-center gap-3">
             {/* Search */}
             <div className="relative">
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-                <circle cx="5.5" cy="5.5" r="4" stroke="#9A9490" strokeWidth="1.2" />
-                <path d="M9 9l2 2" stroke="#9A9490" strokeWidth="1.2" strokeLinecap="round" />
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'rgba(240,244,255,0.35)' }}>
+                <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M9 9l2 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
               </svg>
               <input
                 value={search}
@@ -252,9 +248,9 @@ export function SectionRecipeList({
                 placeholder="Search recipes…"
                 className="pl-8 pr-3 py-1.5 text-[13px] rounded-lg"
                 style={{
-                  background: '#FFFFFF',
-                  border: '1px solid rgba(26,23,20,0.14)',
-                  color: '#1A1714',
+                  background: '#122347',
+                  border: '1px solid rgba(126,184,247,0.14)',
+                  color: 'rgba(240,244,255,0.80)',
                   width: 200,
                   outline: 'none',
                 }}
@@ -262,12 +258,15 @@ export function SectionRecipeList({
             </div>
 
             {/* View toggle */}
-            <div className="flex items-center gap-0.5 p-0.5 rounded-lg" style={{ background: 'rgba(26,23,20,0.07)' }}>
+            <div className="flex items-center gap-0.5 p-0.5 rounded-lg" style={{ background: 'rgba(126,184,247,0.08)' }}>
               <button
                 onClick={() => setViewMode('list')}
                 aria-label="List view"
                 className="w-8 h-7 flex items-center justify-center rounded transition-colors"
-                style={{ background: view === 'list' ? '#FFFFFF' : 'transparent', color: view === 'list' ? '#1A1714' : '#9A9490', boxShadow: view === 'list' ? '0 1px 2px rgba(26,23,20,0.10)' : 'none' }}
+                style={{
+                  background: view === 'list' ? 'rgba(126,184,247,0.20)' : 'transparent',
+                  color: view === 'list' ? '#f0f4ff' : 'rgba(240,244,255,0.40)',
+                }}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M2 3.5h10M2 7h10M2 10.5h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -277,7 +276,10 @@ export function SectionRecipeList({
                 onClick={() => setViewMode('grid')}
                 aria-label="Grid view"
                 className="w-8 h-7 flex items-center justify-center rounded transition-colors"
-                style={{ background: view === 'grid' ? '#FFFFFF' : 'transparent', color: view === 'grid' ? '#1A1714' : '#9A9490', boxShadow: view === 'grid' ? '0 1px 2px rgba(26,23,20,0.10)' : 'none' }}
+                style={{
+                  background: view === 'grid' ? 'rgba(126,184,247,0.20)' : 'transparent',
+                  color: view === 'grid' ? '#f0f4ff' : 'rgba(240,244,255,0.40)',
+                }}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <rect x="1.5" y="1.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.3" />
@@ -292,8 +294,7 @@ export function SectionRecipeList({
             {recipes.length > 1 && (
               <button
                 onClick={enterReorderMode}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-opacity hover:opacity-80 shrink-0"
-                style={{ background: 'rgba(26,23,20,0.07)', color: '#1A1714', border: '1px solid rgba(26,23,20,0.11)' }}
+                className="btn-ghost flex items-center gap-1.5 text-[12px] font-semibold shrink-0"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M2 3.5h8M2 6h8M2 8.5h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -320,12 +321,12 @@ export function SectionRecipeList({
       </div>
 
       {orderError && (
-        <p className="text-[13px] mb-4" style={{ color: '#dc2626' }}>{orderError}</p>
+        <p className="text-[13px] mb-4" style={{ color: '#f87171' }}>{orderError}</p>
       )}
 
       {/* Content */}
       {reorderMode ? (
-        /* ── Recipe reorder list ── */
+        /* Recipe reorder list */
         <div className="rounded-card overflow-hidden space-y-2" style={{ background: 'transparent' }}>
           {reorderItems.map((recipe, idx) => {
             const isDragOver = dragOverIdx === idx && dragIdx.current !== idx
@@ -340,41 +341,32 @@ export function SectionRecipeList({
                 onDragEnd={() => { dragIdx.current = -1; setDragOverIdx(-1) }}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl select-none"
                 style={{
-                  background: isDragOver ? `${themeColor}10` : '#FFFFFF',
-                  border: `1.5px solid ${isDragOver ? themeColor + '55' : 'rgba(26,23,20,0.09)'}`,
+                  background: isDragOver ? `${themeColor}14` : '#122347',
+                  border: `1.5px solid ${isDragOver ? themeColor + '55' : 'rgba(126,184,247,0.10)'}`,
                   cursor: 'grab',
                   transition: 'border-color 0.1s, background 0.1s',
                 }}
               >
-                {/* Drag handle */}
-                <div className="shrink-0 cursor-grab" style={{ color: '#B0A89E' }}>
+                <div className="shrink-0 cursor-grab" style={{ color: 'rgba(126,184,247,0.35)' }}>
                   <RecipeDragHandle />
                 </div>
-
-                {/* Status dot */}
                 <div className="shrink-0 w-2 h-2 rounded-full" style={{ background: s.dot }} />
-
-                {/* Title */}
                 <span className="font-fraunces text-[14px] text-text-primary flex-1 min-w-0 truncate">
                   {recipe.title}
                 </span>
-
-                {/* Status badge */}
                 <span
                   className="text-[11px] font-medium px-2 py-0.5 rounded shrink-0"
                   style={{ background: s.bg, color: s.text }}
                 >
                   {s.label}
                 </span>
-
-                {/* ↑ ↓ buttons */}
                 <div className="flex items-center gap-0.5 shrink-0">
                   <button
                     onClick={() => moveUpRecipe(idx)}
                     disabled={idx === 0}
                     draggable={false}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-[rgba(26,23,20,0.07)] disabled:opacity-25"
-                    style={{ color: '#1A1714', lineHeight: 1 }}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-white/10 disabled:opacity-25"
+                    style={{ color: 'rgba(240,244,255,0.70)', lineHeight: 1 }}
                   >
                     ↑
                   </button>
@@ -382,8 +374,8 @@ export function SectionRecipeList({
                     onClick={() => moveDownRecipe(idx)}
                     disabled={idx === reorderItems.length - 1}
                     draggable={false}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-[rgba(26,23,20,0.07)] disabled:opacity-25"
-                    style={{ color: '#1A1714', lineHeight: 1 }}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors hover:bg-white/10 disabled:opacity-25"
+                    style={{ color: 'rgba(240,244,255,0.70)', lineHeight: 1 }}
                   >
                     ↓
                   </button>
@@ -413,7 +405,7 @@ export function SectionRecipeList({
           ))}
         </div>
       ) : (
-        <div className="rounded-card overflow-hidden" style={{ border: '1px solid rgba(26,23,20,0.09)' }}>
+        <div className="rounded-card overflow-hidden" style={{ border: '1px solid rgba(126,184,247,0.10)', background: '#1A2F5E' }}>
           {filtered.map((recipe, i) => (
             <RecipeRow
               key={recipe.id}
@@ -435,32 +427,32 @@ export function SectionRecipeList({
       {pendingDelete && (
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center px-5"
-          style={{ background: 'rgba(26,23,20,0.55)' }}
+          style={{ background: 'rgba(0,0,0,0.70)', backdropFilter: 'blur(4px)' }}
           onClick={() => { if (!deleting) setPendingDelete(null) }}
         >
           <div
-            className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            className="rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            style={{ background: '#122347', border: '1px solid rgba(126,184,247,0.12)' }}
             onClick={e => e.stopPropagation()}
           >
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center mb-4"
-              style={{ background: 'rgba(220,38,38,0.10)' }}
+              style={{ background: 'rgba(220,38,38,0.15)' }}
             >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M2.5 4.5h13M7 4.5V3h4v1.5M4.5 4.5l.5 11h8l.5-11" stroke="#dc2626" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M7.5 8v5M10.5 8v5" stroke="#dc2626" strokeWidth="1.4" strokeLinecap="round" />
+                <path d="M2.5 4.5h13M7 4.5V3h4v1.5M4.5 4.5l.5 11h8l.5-11" stroke="#f87171" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M7.5 8v5M10.5 8v5" stroke="#f87171" strokeWidth="1.4" strokeLinecap="round" />
               </svg>
             </div>
             <h3 className="font-fraunces text-[20px] text-text-primary mb-2">Delete recipe?</h3>
             <p className="text-text-secondary text-[14px] leading-relaxed mb-6">
-              Are you sure you want to delete <strong>{pendingDelete.title}</strong>? This cannot be undone.
+              Are you sure you want to delete <strong style={{ color: '#f0f4ff' }}>{pendingDelete.title}</strong>? This cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setPendingDelete(null)}
                 disabled={deleting}
-                className="px-4 py-2 rounded-lg text-[13px] font-semibold transition-opacity hover:opacity-70 disabled:opacity-40"
-                style={{ background: 'rgba(26,23,20,0.07)', color: '#1A1714' }}
+                className="btn-ghost text-[13px] font-semibold disabled:opacity-40"
               >
                 Cancel
               </button>
@@ -481,36 +473,37 @@ export function SectionRecipeList({
       {pendingMove && (
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center px-5"
-          style={{ background: 'rgba(26,23,20,0.55)' }}
+          style={{ background: 'rgba(0,0,0,0.70)', backdropFilter: 'blur(4px)' }}
           onClick={() => { if (!moving) setPendingMove(null) }}
         >
           <div
-            className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            className="rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            style={{ background: '#122347', border: '1px solid rgba(126,184,247,0.12)' }}
             onClick={e => e.stopPropagation()}
           >
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center mb-4"
-              style={{ background: 'rgba(26,23,20,0.07)' }}
+              style={{ background: 'rgba(126,184,247,0.12)' }}
             >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M1.5 6a1 1 0 0 1 1-1h3.5l1.5 1.5H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1V6z" stroke="#1A1714" strokeWidth="1.4" strokeLinejoin="round" />
-                <path d="M7 10.5h4M9.5 8.5l2 2-2 2" stroke="#1A1714" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M1.5 6a1 1 0 0 1 1-1h3.5l1.5 1.5H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1V6z" stroke="#7eb8f7" strokeWidth="1.4" strokeLinejoin="round" />
+                <path d="M7 10.5h4M9.5 8.5l2 2-2 2" stroke="#7eb8f7" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <h3 className="font-fraunces text-[20px] text-text-primary mb-1">Move recipe</h3>
             <p className="text-text-secondary text-[14px] mb-4">
-              Move <strong>{pendingMove.title}</strong> to:
+              Move <strong style={{ color: '#f0f4ff' }}>{pendingMove.title}</strong> to:
             </p>
-            <div className="rounded-xl overflow-hidden mb-5" style={{ border: '1px solid rgba(26,23,20,0.10)' }}>
+            <div className="rounded-xl overflow-hidden mb-5" style={{ border: '1px solid rgba(126,184,247,0.12)' }}>
               {sections.filter(s => s.id !== sectionId).map((s, i, arr) => (
                 <button
                   key={s.id}
                   onClick={() => handleMoveConfirm(s.id)}
                   disabled={moving}
-                  className="w-full text-left px-4 py-2.5 text-[14px] transition-colors hover:bg-[rgba(26,23,20,0.04)] disabled:opacity-50"
+                  className="w-full text-left px-4 py-2.5 text-[14px] transition-colors hover:bg-white/05 disabled:opacity-50"
                   style={{
-                    color: '#1A1714',
-                    borderBottom: i < arr.length - 1 ? '1px solid rgba(26,23,20,0.07)' : 'none',
+                    color: 'rgba(240,244,255,0.80)',
+                    borderBottom: i < arr.length - 1 ? '1px solid rgba(126,184,247,0.08)' : 'none',
                   }}
                 >
                   {s.name}
@@ -521,8 +514,7 @@ export function SectionRecipeList({
               <button
                 onClick={() => setPendingMove(null)}
                 disabled={moving}
-                className="px-4 py-2 rounded-lg text-[13px] font-semibold transition-opacity hover:opacity-70 disabled:opacity-40"
-                style={{ background: 'rgba(26,23,20,0.07)', color: '#1A1714' }}
+                className="btn-ghost text-[13px] font-semibold disabled:opacity-40"
               >
                 Cancel
               </button>
@@ -535,7 +527,7 @@ export function SectionRecipeList({
       {listToast && (
         <div
           className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 px-5 py-2.5 rounded-full text-[13px] font-semibold shadow-lg pointer-events-none"
-          style={{ background: '#1A1714', color: '#FFFFFF' }}
+          style={{ background: '#122347', color: '#f0f4ff', border: '1px solid rgba(126,184,247,0.20)' }}
         >
           ✓ {listToast}
         </div>
@@ -562,7 +554,7 @@ function RecipeCard({
       style={{
         aspectRatio: '3/4',
         borderRadius: 10,
-        background: '#1A1714',
+        background: '#1A2F5E',
         position: 'relative',
         animationDelay: `${animIndex * 40}ms`,
         transition: 'transform 0.2s ease, filter 0.2s ease',
@@ -570,7 +562,6 @@ function RecipeCard({
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)'; (e.currentTarget as HTMLElement).style.filter = 'brightness(1.1)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.filter = '' }}
     >
-      {/* Photo or placeholder */}
       {photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -581,21 +572,19 @@ function RecipeCard({
       ) : (
         <div
           className="absolute inset-0 flex items-center justify-center"
-          style={{ background: 'linear-gradient(160deg, #2D2A26 0%, #1A1714 100%)' }}
+          style={{ background: 'linear-gradient(160deg, #122347 0%, #1A2F5E 100%)' }}
         >
-          <span className="text-[32px] leading-none select-none" style={{ opacity: 0.45 }}>
+          <span className="text-[32px] leading-none select-none" style={{ opacity: 0.40 }}>
             {sectionEmoji}
           </span>
         </div>
       )}
 
-      {/* Bottom gradient for title legibility */}
       <div
         className="absolute bottom-0 left-0 right-0 pointer-events-none"
         style={{ height: '60%', background: 'linear-gradient(to top, rgba(0,0,0,0.90) 0%, transparent 100%)' }}
       />
 
-      {/* Heart — 28px circle, top right */}
       <div
         className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full"
         style={{ background: 'rgba(0,0,0,0.30)', backdropFilter: 'blur(4px)' }}
@@ -605,7 +594,6 @@ function RecipeCard({
         </svg>
       </div>
 
-      {/* Cost badge — top left, only if cost data exists */}
       {costBadge && (
         <div className="absolute top-2 left-2">
           <span
@@ -617,7 +605,6 @@ function RecipeCard({
         </div>
       )}
 
-      {/* Title — 14px, max 2 lines */}
       <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5">
         <p className="font-fraunces text-[14px] text-white leading-snug line-clamp-2">
           {recipe.title}
@@ -642,10 +629,10 @@ function RecipeRow({
 
   return (
     <div
-      className="group flex items-center transition-colors"
+      className="group flex items-center transition-colors hover:bg-white/[0.03]"
       style={{
-        borderBottom: isLast ? 'none' : '1px solid rgba(26,23,20,0.06)',
-        background: rowIndex % 2 === 1 ? 'rgba(26,23,20,0.025)' : 'transparent',
+        borderBottom: isLast ? 'none' : '1px solid rgba(126,184,247,0.06)',
+        background: rowIndex % 2 === 1 ? 'rgba(126,184,247,0.025)' : 'transparent',
       }}
     >
       <Link
@@ -655,7 +642,7 @@ function RecipeRow({
         <div className="flex items-center gap-4 min-w-0 flex-1">
           <div className="shrink-0 w-2 h-2 rounded-full mt-0.5" style={{ background: s.dot }} />
           <div className="min-w-0 flex-1">
-            <span className="font-fraunces text-[15px] text-text-primary truncate block group-hover:text-black transition-colors">
+            <span className="font-fraunces text-[15px] text-text-primary truncate block transition-colors">
               {recipe.title}
             </span>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -699,13 +686,12 @@ function RecipeRow({
         </div>
       </Link>
 
-      {/* Move icon — appears on row hover when other sections exist */}
       {onMoveRequest && (
         <button
           onClick={() => onMoveRequest({ id: recipe.id, title: recipe.title })}
           title="Move to section"
-          className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[rgba(26,23,20,0.08)]"
-          style={{ color: '#6E6560' }}
+          className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10"
+          style={{ color: 'rgba(240,244,255,0.45)' }}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M1 4.5a1 1 0 0 1 1-1h2.5l1 1H12a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
@@ -714,12 +700,11 @@ function RecipeRow({
         </button>
       )}
 
-      {/* Trash icon — appears on row hover */}
       <button
         onClick={() => onDeleteRequest({ id: recipe.id, title: recipe.title })}
         title="Delete recipe"
-        className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mr-3 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[rgba(220,38,38,0.08)]"
-        style={{ color: '#dc2626' }}
+        className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mr-3 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[rgba(220,38,38,0.12)]"
+        style={{ color: '#f87171' }}
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path d="M2 3.5h10M5.5 3.5V2h3v1.5M3.5 3.5l.5 8.5h6l.5-8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -747,7 +732,7 @@ function Chip({ children }: { children: React.ReactNode }) {
   return (
     <span
       className="inline-flex items-center text-[11px] px-1.5 py-0.5 rounded text-text-muted"
-      style={{ background: 'rgba(26,23,20,0.05)', border: '1px solid rgba(26,23,20,0.07)' }}
+      style={{ background: 'rgba(126,184,247,0.06)', border: '1px solid rgba(126,184,247,0.10)' }}
     >
       {children}
     </span>
@@ -756,7 +741,7 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 function NoResults({ search }: { search: string }) {
   return (
-    <div className="rounded-card px-8 py-12 text-center" style={{ border: '1px solid rgba(26,23,20,0.09)' }}>
+    <div className="rounded-card px-8 py-12 text-center" style={{ border: '1px solid rgba(126,184,247,0.10)' }}>
       <p className="font-fraunces text-[16px] text-text-primary mb-1">No results for &ldquo;{search}&rdquo;</p>
       <p className="text-text-muted text-[13px]">Try a different search term.</p>
     </div>
@@ -767,7 +752,7 @@ function EmptyState({ venueId, sectionId, themeColor }: { venueId: string; secti
   return (
     <div
       className="rounded-card px-8 py-16 text-center anim-fade-up"
-      style={{ border: '1px dashed rgba(26,23,20,0.15)', background: 'rgba(26,23,20,0.02)' }}
+      style={{ border: '1px dashed rgba(126,184,247,0.15)', background: 'rgba(126,184,247,0.03)' }}
     >
       <div
         className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"

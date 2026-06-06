@@ -12,25 +12,34 @@ module.exports = {
         sans: ['var(--font-dm-sans)', 'system-ui', 'sans-serif'],
       },
       colors: {
-        canvas: '#F8F4EE',
-        surface: '#FFFFFF',
-        'surface-warm': '#FDFAF3',
+        canvas:  '#0B1F4A',
+        surface: '#0D2354',
+        panel:   '#122347',
+        card:    '#1A2F5E',
         text: {
-          primary: '#1A1714',
-          secondary: '#4A4540',
-          muted: '#9A9490',
+          primary:   '#f0f4ff',
+          secondary: 'rgba(240,244,255,0.65)',
+          muted:     'rgba(240,244,255,0.35)',
         },
-        ink: {
-          border: 'rgba(26,23,20,0.09)',
-          'border-mid': 'rgba(26,23,20,0.14)',
-          subtle: 'rgba(26,23,20,0.05)',
+        pink: {
+          DEFAULT: '#f090b8',
+          deep:    '#d4608e',
+          soft:    'rgba(240,144,184,0.12)',
+          border:  'rgba(240,144,184,0.15)',
         },
-        gold: {
-          DEFAULT: '#C8973A',
-          light: '#E0B060',
-          dim: '#A07828',
-          pale: '#F5EDD8',
-          border: 'rgba(200,151,58,0.30)',
+        blue: {
+          DEFAULT: '#7eb8f7',
+          deep:    '#4a90d9',
+          soft:    'rgba(126,184,247,0.10)',
+          border:  'rgba(126,184,247,0.12)',
+        },
+        teal: {
+          DEFAULT: '#4ecdc4',
+          soft:    'rgba(78,205,196,0.10)',
+        },
+        border: {
+          DEFAULT: 'rgba(100,150,240,0.35)',
+          pink:    'rgba(240,144,184,0.15)',
         },
       },
       screens: {
@@ -38,12 +47,13 @@ module.exports = {
         desktop: '1280px',
       },
       borderRadius: {
-        card: '12px',
+        card: '14px',
       },
       boxShadow: {
-        card: '0 1px 2px rgba(26,23,20,0.04), 0 2px 8px rgba(26,23,20,0.06)',
-        'card-hover': '0 4px 12px rgba(26,23,20,0.08), 0 12px 32px rgba(26,23,20,0.10)',
-        'gold-ring': '0 0 0 1px rgba(200,151,58,0.30), 0 2px 12px rgba(200,151,58,0.10)',
+        card:    '0 2px 12px rgba(0,0,0,0.40), 0 1px 3px rgba(0,0,0,0.25)',
+        'pink-glow':  '0 8px 32px rgba(240,144,184,0.18)',
+        'blue-glow':  '0 8px 32px rgba(126,184,247,0.14)',
+        'teal-glow':  '0 8px 32px rgba(78,205,196,0.14)',
       },
     },
   },

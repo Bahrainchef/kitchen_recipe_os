@@ -10,7 +10,7 @@ type Stage = 'upload' | 'review' | 'publishing' | 'done'
 
 const STATUS_CONFIG = {
   ok:      { label: '✓ OK',      bg: 'rgba(22,163,74,0.10)',  text: '#15803d' },
-  warning: { label: '⚠ Warning', bg: 'rgba(200,151,58,0.12)', text: '#A07828' },
+  warning: { label: '⚠ Warning', bg: 'rgba(139,124,248,0.12)', text: '#6255CC' },
   error:   { label: '✗ Error',   bg: 'rgba(220,38,38,0.10)',  text: '#dc2626' },
 }
 
@@ -156,7 +156,7 @@ export function ImportClient({ venues, sections }: Props) {
           onClick={() => inputRef.current?.click()}
           className="cursor-pointer rounded-card flex flex-col items-center justify-center gap-4 py-16 px-8 text-center transition-colors"
           style={{
-            border: `2px dashed ${dragging ? '#C8973A' : 'rgba(26,23,20,0.18)'}`,
+            border: `2px dashed ${dragging ? '#8B7CF8' : 'rgba(26,23,20,0.18)'}`,
             background: dragging ? 'rgba(200,151,58,0.04)' : '#FFFFFF',
           }}
         >
@@ -230,7 +230,7 @@ export function ImportClient({ venues, sections }: Props) {
   if (stage === 'publishing') {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <div className="w-10 h-10 rounded-full border-2 border-[rgba(26,23,20,0.10)] border-t-[#C8973A] animate-spin" />
+        <div className="w-10 h-10 rounded-full border-2 border-[rgba(139,124,248,0.18)] border-t-[#8B7CF8] animate-spin" />
         <p className="font-fraunces text-[18px] text-text-primary">Publishing recipes…</p>
         <p className="text-text-muted text-[13px]">
           Adding {selected.size} {selected.size === 1 ? 'recipe' : 'recipes'} to the database
@@ -370,7 +370,7 @@ export function ImportClient({ venues, sections }: Props) {
           onClick={publish}
           disabled={selected.size === 0}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-opacity disabled:opacity-40"
-          style={{ background: '#1A1714', color: '#C8973A' }}
+          style={{ background: '#1A1714', color: '#8B7CF8' }}
         >
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
             <path d="M6.5 9V2M3.5 5l3-3 3 3M1.5 11h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -427,7 +427,7 @@ export function ImportClient({ venues, sections }: Props) {
                   checked={isChecked}
                   disabled={isError}
                   onChange={() => toggleSelect(recipe.tab_name)}
-                  className="w-4 h-4 cursor-pointer accent-[#C8973A] disabled:opacity-30"
+                  className="w-4 h-4 cursor-pointer accent-[#8B7CF8] disabled:opacity-30"
                 />
 
                 {/* Tab name */}
@@ -480,7 +480,7 @@ export function ImportClient({ venues, sections }: Props) {
                     <p key={i} className="text-[11px] text-[#dc2626] leading-snug">{e}</p>
                   ))}
                   {recipe.warnings.map((w, i) => (
-                    <p key={i} className="text-[11px] text-[#A07828] leading-snug">{w}</p>
+                    <p key={i} className="text-[11px] text-[#6255CC] leading-snug">{w}</p>
                   ))}
                   <p className="text-[11px] text-text-muted">
                     {recipe.ingredients.filter(i => i.name).length} ingredients
@@ -515,7 +515,7 @@ export function ImportClient({ venues, sections }: Props) {
           <button
             onClick={publish}
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-opacity hover:opacity-80"
-            style={{ background: '#1A1714', color: '#C8973A' }}
+            style={{ background: '#1A1714', color: '#8B7CF8' }}
           >
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <path d="M6.5 9V2M3.5 5l3-3 3 3M1.5 11h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />

@@ -135,14 +135,18 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
   }
 
   const inputCls = 'w-full px-2.5 py-1.5 rounded-lg text-[13px] outline-none transition-colors'
-  const inputStyle = { border: '1px solid rgba(26,23,20,0.15)', background: '#FFFFFF', color: '#1A1714' }
+  const inputStyle = {
+    border: '1px solid rgba(126,184,247,0.16)',
+    background: '#0B1F4A',
+    color: '#f0f4ff',
+  }
 
   return (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/40"
-        style={{ backdropFilter: 'blur(2px)' }}
+        className="fixed inset-0 z-50 bg-black/60"
+        style={{ backdropFilter: 'blur(3px)' }}
         onClick={onClose}
       />
 
@@ -151,14 +155,15 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
         className="fixed right-0 top-0 bottom-0 z-50 flex flex-col"
         style={{
           width: 'min(680px, 100vw)',
-          background: '#F8F4EE',
-          boxShadow: '-8px 0 40px rgba(26,23,20,0.18)',
+          background: '#122347',
+          boxShadow: '-8px 0 40px rgba(0,0,0,0.50)',
+          borderLeft: '1px solid rgba(126,184,247,0.10)',
         }}
       >
         {/* Header */}
         <div
           className="flex items-center justify-between px-6 py-4 shrink-0"
-          style={{ borderBottom: '1px solid rgba(26,23,20,0.10)', background: '#FFFFFF' }}
+          style={{ borderBottom: '1px solid rgba(126,184,247,0.12)', background: '#1A2F5E' }}
         >
           <div>
             <h2 className="font-fraunces text-[20px] text-text-primary leading-none">Edit Recipe</h2>
@@ -166,8 +171,8 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-[rgba(26,23,20,0.07)]"
-            style={{ color: '#6E6560' }}
+            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
+            style={{ color: 'rgba(240,244,255,0.50)' }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -178,7 +183,7 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
         {/* Tab bar */}
         <div
           className="flex gap-1 px-6 py-2.5 shrink-0"
-          style={{ borderBottom: '1px solid rgba(26,23,20,0.08)', background: '#FFFFFF' }}
+          style={{ borderBottom: '1px solid rgba(126,184,247,0.08)', background: '#1A2F5E' }}
         >
           {(['info', 'ingredients', 'method'] as Tab[]).map(t => (
             <button
@@ -187,7 +192,7 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
               className="px-3.5 py-1.5 rounded-full text-[12px] font-semibold capitalize transition-colors"
               style={tab === t
                 ? { background: themeColor, color: '#FFFFFF' }
-                : { background: 'rgba(26,23,20,0.06)', color: '#6E6560' }
+                : { background: 'rgba(126,184,247,0.08)', color: 'rgba(240,244,255,0.55)' }
               }
             >
               {t === 'info' ? 'Basic Info' : t === 'ingredients' ? `Ingredients (${ings.length})` : `Method (${stepRows.length})`}
@@ -279,8 +284,8 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
                     />
                     <button
                       onClick={() => deleteIng(row._key)}
-                      className="w-7 h-7 mt-0.5 flex items-center justify-center rounded-full shrink-0 transition-colors hover:bg-[rgba(220,38,38,0.10)]"
-                      style={{ color: '#B0A89E' }}
+                      className="w-7 h-7 mt-0.5 flex items-center justify-center rounded-full shrink-0 transition-colors hover:bg-[rgba(220,38,38,0.12)]"
+                      style={{ color: 'rgba(240,244,255,0.35)' }}
                     >
                       <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
                         <path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -292,7 +297,7 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
               <button
                 onClick={addIng}
                 className="mt-3 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12px] font-semibold transition-colors hover:opacity-80"
-                style={{ background: 'rgba(26,23,20,0.07)', color: '#4A4540' }}
+                style={{ background: 'rgba(126,184,247,0.08)', color: 'rgba(240,244,255,0.70)', border: '1px solid rgba(126,184,247,0.12)' }}
               >
                 <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
                   <path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -325,8 +330,8 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
                       <button
                         onClick={() => moveStep(row._key, -1)}
                         disabled={i === 0}
-                        className="w-6 h-6 flex items-center justify-center rounded transition-colors hover:bg-[rgba(26,23,20,0.08)] disabled:opacity-25"
-                        style={{ color: '#6E6560' }}
+                        className="w-6 h-6 flex items-center justify-center rounded transition-colors hover:bg-white/10 disabled:opacity-25"
+                        style={{ color: 'rgba(240,244,255,0.45)' }}
                       >
                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                           <path d="M2 7l3-4 3 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -335,8 +340,8 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
                       <button
                         onClick={() => moveStep(row._key, 1)}
                         disabled={i === stepRows.length - 1}
-                        className="w-6 h-6 flex items-center justify-center rounded transition-colors hover:bg-[rgba(26,23,20,0.08)] disabled:opacity-25"
-                        style={{ color: '#6E6560' }}
+                        className="w-6 h-6 flex items-center justify-center rounded transition-colors hover:bg-white/10 disabled:opacity-25"
+                        style={{ color: 'rgba(240,244,255,0.45)' }}
                       >
                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                           <path d="M2 3l3 4 3-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -345,8 +350,8 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
                     </div>
                     <button
                       onClick={() => deleteStep(row._key)}
-                      className="w-6 h-6 mt-1.5 flex items-center justify-center rounded-full shrink-0 transition-colors hover:bg-[rgba(220,38,38,0.10)]"
-                      style={{ color: '#B0A89E' }}
+                      className="w-6 h-6 mt-1.5 flex items-center justify-center rounded-full shrink-0 transition-colors hover:bg-[rgba(220,38,38,0.12)]"
+                      style={{ color: 'rgba(240,244,255,0.35)' }}
                     >
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                         <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -361,7 +366,7 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
               <button
                 onClick={addStep}
                 className="mt-3 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12px] font-semibold transition-colors hover:opacity-80"
-                style={{ background: 'rgba(26,23,20,0.07)', color: '#4A4540' }}
+                style={{ background: 'rgba(126,184,247,0.08)', color: 'rgba(240,244,255,0.70)', border: '1px solid rgba(126,184,247,0.12)' }}
               >
                 <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
                   <path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -375,18 +380,17 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
         {/* Footer */}
         <div
           className="shrink-0 flex items-center justify-between gap-3 px-6 py-4"
-          style={{ borderTop: '1px solid rgba(26,23,20,0.10)', background: '#FFFFFF' }}
+          style={{ borderTop: '1px solid rgba(126,184,247,0.12)', background: '#1A2F5E' }}
         >
           <div className="flex-1 min-w-0">
             {saveError && (
-              <p className="text-[12px] text-[#dc2626] truncate">{saveError}</p>
+              <p className="text-[12px] text-[#f87171] truncate">{saveError}</p>
             )}
           </div>
           <button
             onClick={onClose}
             disabled={saving}
-            className="px-4 py-2 rounded-full text-[13px] font-medium transition-colors hover:bg-[rgba(26,23,20,0.07)]"
-            style={{ background: 'rgba(26,23,20,0.06)', color: '#4A4540' }}
+            className="btn-ghost text-[13px] font-medium disabled:opacity-40"
           >
             Cancel
           </button>
