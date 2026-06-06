@@ -14,6 +14,7 @@ const VENUE_PAGE_HERO: Record<string, string> = {
   'a1000000-0000-0000-0000-000000000001': `${STORAGE}/brewed-hero.webp`,
   'a1000000-0000-0000-0000-000000000002': `${STORAGE}/wildflour-hero-1.webp`,
   'a1000000-0000-0000-0000-000000000003': `${STORAGE}/sage-sirloin-bh-hero.jpg`,
+  'a1000000-0000-0000-0000-000000000004': `${STORAGE}/royal-chippy-hero.jpg`,
   'a1000000-0000-0000-0000-000000000005': `${STORAGE}/sage-lounge-hero.jpg`,
   'a1000000-0000-0000-0000-000000000006': `${STORAGE}/tfj-hero-2.webp`,
   'a1000000-0000-0000-0000-000000000007': `${STORAGE}/vseven-hero-2.jpg`,

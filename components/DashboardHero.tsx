@@ -52,7 +52,7 @@ export function DashboardHero({ totalVenues, totalSections, totalRecipes }: Prop
       {/* Dark overlay */}
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0,0,0,0.50)' }}
+        style={{ background: 'rgba(0,0,0,0.55)' }}
       />
 
       {/* Content */}
