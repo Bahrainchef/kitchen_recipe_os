@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 
 const HERO_URL =
-  'https://vuxpsnjbciyowpkbgwlv.supabase.co/storage/v1/object/public/venue-images/app-hero-bg.jpg'
+  'https://vuxpsnjbciyowpkbgwlv.supabase.co/storage/v1/object/public/venue-images/app-hero-bg.webp'
 
 interface Props {
   totalVenues: number
