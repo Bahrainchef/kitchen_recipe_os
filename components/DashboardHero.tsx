@@ -5,7 +5,13 @@ import { useEffect, useRef } from 'react'
 const HERO_URL =
   'https://vuxpsnjbciyowpkbgwlv.supabase.co/storage/v1/object/public/venue-images/app-hero-bg.jpg'
 
-export function DashboardHero() {
+interface Props {
+  totalVenues: number
+  totalSections: number
+  totalRecipes: number
+}
+
+export function DashboardHero({ totalVenues, totalSections, totalRecipes }: Props) {
   const imgRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -13,8 +19,7 @@ export function DashboardHero() {
     const onScroll = () => {
       rafId = requestAnimationFrame(() => {
         if (imgRef.current) {
-          const scrollY = window.scrollY
-          imgRef.current.style.transform = `translateY(${scrollY * 0.30}px)`
+          imgRef.current.style.transform = `translateY(${window.scrollY * 0.28}px)`
         }
       })
     }
@@ -28,10 +33,9 @@ export function DashboardHero() {
   return (
     <div
       className="relative w-full overflow-hidden"
-      style={{ height: 220 }}
-      aria-hidden
+      style={{ height: 200 }}
     >
-      {/* Parallax image layer */}
+      {/* Parallax photo */}
       <div
         ref={imgRef}
         className="absolute inset-x-0"
@@ -48,38 +52,66 @@ export function DashboardHero() {
       {/* Dark overlay */}
       <div
         className="absolute inset-0"
-        style={{
-          background: 'linear-gradient(to bottom, rgba(11,31,74,0.45) 0%, rgba(11,31,74,0.60) 60%, rgba(11,31,74,0.82) 100%)',
-        }}
+        style={{ background: 'rgba(0,0,0,0.50)' }}
       />
 
-      {/* Text content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-        <p
-          className="text-[11px] font-semibold tracking-[0.22em] uppercase mb-2"
-          style={{ color: '#4ecdc4' }}
-        >
-          F&amp;B Group
-        </p>
+      {/* Content */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 gap-2">
         <h1
-          className="font-fraunces text-[36px] tablet:text-[48px] leading-none tracking-tight mb-2"
-          style={{ color: '#ffffff', textShadow: '0 2px 20px rgba(0,0,0,0.40)' }}
+          className="font-fraunces italic leading-none tracking-tight"
+          style={{
+            color: '#ffffff',
+            fontSize: 'clamp(28px, 5vw, 52px)',
+            textShadow: '0 2px 24px rgba(0,0,0,0.50)',
+          }}
         >
           Kitchen Recipe OS
         </h1>
+
         <p
-          className="text-[15px] tablet:text-[17px] font-light"
-          style={{ color: 'rgba(255,255,255,0.65)' }}
+          className="text-[13px] tablet:text-[14px] font-light tracking-wide"
+          style={{ color: 'rgba(255,255,255,0.70)' }}
         >
-          Your venues
+          F&amp;B Group &nbsp;·&nbsp; {totalVenues} Venues &nbsp;·&nbsp; Bahrain &amp; Saudi Arabia
         </p>
+
+        {/* Stat badges */}
+        <div className="flex items-center gap-2 mt-1">
+          <StatBadge value={totalRecipes} label="recipes" />
+          <StatBadge value={totalSections} label="sections" />
+          <StatBadge value={totalVenues} label="venues" color="#4ecdc4" pulse />
+        </div>
       </div>
 
-      {/* Bottom fade into page bg */}
+      {/* Bottom fade */}
       <div
         className="absolute bottom-0 left-0 right-0 pointer-events-none"
-        style={{ height: 40, background: 'linear-gradient(to bottom, transparent, #0B1F4A)' }}
+        style={{ height: 48, background: 'linear-gradient(to bottom, transparent, #0B1F4A)' }}
       />
+    </div>
+  )
+}
+
+function StatBadge({
+  value, label, color = 'rgba(255,255,255,0.80)', pulse = false,
+}: {
+  value: number; label: string; color?: string; pulse?: boolean
+}) {
+  return (
+    <div
+      className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px]"
+      style={{
+        background: 'rgba(0,0,0,0.35)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255,255,255,0.14)',
+        color: 'rgba(255,255,255,0.80)',
+      }}
+    >
+      {pulse && (
+        <span className="w-1.5 h-1.5 rounded-full status-dot-pulse shrink-0" style={{ background: color }} />
+      )}
+      <span className="font-bold tabular-nums" style={{ color }}>{value}</span>
+      <span>{label}</span>
     </div>
   )
 }

@@ -8,45 +8,52 @@ import type { Venue, Section } from '@/lib/types/database.types'
 async function getVenuesAndSections(): Promise<{
   venues: Venue[]
   sections: Section[]
+  totalRecipes: number
   offlineReason: string | null
 }> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!url || !serviceKey || url.includes('your-project-ref') || serviceKey === 'your-service-role-key-here') {
-    return { venues: SEED_VENUES, sections: SEED_SECTIONS, offlineReason: 'Supabase not configured (.env.local missing or incomplete)' }
+    return { venues: SEED_VENUES, sections: SEED_SECTIONS, totalRecipes: 0, offlineReason: 'Supabase not configured (.env.local missing or incomplete)' }
   }
 
   try {
     const { createAdminClient } = await import('@/lib/supabase/admin')
     const supabase = createAdminClient()
-    const [venueRes, sectionRes] = await Promise.all([
+    const [venueRes, sectionRes, recipeCountRes] = await Promise.all([
       supabase.from('venues').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
       supabase.from('sections').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
+      supabase.from('recipes').select('id', { count: 'exact', head: true }),
     ])
     const err = venueRes.error ?? sectionRes.error
     if (err) {
       const reason = err.message ?? JSON.stringify(err)
       console.error(`[Kitchen OS] Supabase read failed (${err.code ?? 'unknown'}): ${reason}`)
-      return { venues: SEED_VENUES, sections: SEED_SECTIONS, offlineReason: reason }
+      return { venues: SEED_VENUES, sections: SEED_SECTIONS, totalRecipes: 0, offlineReason: reason }
     }
-    return { venues: venueRes.data ?? SEED_VENUES, sections: sectionRes.data ?? SEED_SECTIONS, offlineReason: null }
+    return {
+      venues: venueRes.data ?? SEED_VENUES,
+      sections: sectionRes.data ?? SEED_SECTIONS,
+      totalRecipes: recipeCountRes.count ?? 0,
+      offlineReason: null,
+    }
   } catch (e) {
     const reason = e instanceof Error ? e.message : String(e)
     console.error('[Kitchen OS] Supabase connection failed:', reason)
-    return { venues: SEED_VENUES, sections: SEED_SECTIONS, offlineReason: reason }
+    return { venues: SEED_VENUES, sections: SEED_SECTIONS, totalRecipes: 0, offlineReason: reason }
   }
 }
 
 export default async function DashboardPage() {
-  const { venues, sections, offlineReason } = await getVenuesAndSections()
+  const { venues, sections, totalRecipes, offlineReason } = await getVenuesAndSections()
 
   const pastryHub = venues.find((v) => v.venue_type === 'pastry_hub')
   const bahrain = venues.filter((v) => v.venue_type === 'physical' && v.country_code === 'BH')
   const saudi = venues.filter((v) => v.venue_type === 'physical' && v.country_code === 'SA')
   const sectionsFor = (venueId: string) => sections.filter((s) => s.venue_id === venueId)
 
-  const totalVenues = bahrain.length + saudi.length
+  const totalVenues = venues.length
   const totalSections = sections.filter((s) => venues.some((v) => v.id === s.venue_id)).length
   const countriesActive = [bahrain.length > 0, saudi.length > 0].filter(Boolean).length
 
@@ -147,7 +154,7 @@ export default async function DashboardPage() {
       </header>
 
       {/* ── Dashboard Hero ──────────────────────────────────────────── */}
-      <DashboardHero />
+      <DashboardHero totalVenues={totalVenues} totalSections={totalSections} totalRecipes={totalRecipes} />
 
       {/* ── Content ──────────────────────────────────────────────────── */}
       <main className="relative max-w-[1400px] mx-auto px-5 tablet:px-8 py-8 tablet:py-10">
