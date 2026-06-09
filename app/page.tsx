@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { SEED_VENUES, SEED_SECTIONS } from '@/lib/seed-data'
 import { VenueCard } from '@/components/VenueCard'
-import { AnnouncementBanner } from '@/components/AnnouncementBanner'
 import { DashboardHero } from '@/components/DashboardHero'
 import type { Venue, Section } from '@/lib/types/database.types'
 
@@ -66,7 +65,6 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-canvas relative">
 
       {/* ── Announcement banner ── */}
-      <AnnouncementBanner />
 
       {/* ── Ambient orbs ─────────────────────────────────────────────── */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden>
