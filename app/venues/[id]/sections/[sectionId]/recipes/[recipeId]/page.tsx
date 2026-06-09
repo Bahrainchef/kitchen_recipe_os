@@ -142,22 +142,36 @@ export default async function RecipePage({ params }: Props) {
                         )}
                         <table className="w-full">
                           <tbody>
-                            {ings.map(ing => (
-                              <tr key={ing.id} className="border-b" style={{ borderColor: 'rgba(126,184,247,0.08)' }}>
-                                <td className="py-2.5 pr-2 text-[14px] text-text-muted tabular-nums w-14 text-right align-top">
-                                  {ing.quantity != null ? formatQty(ing.quantity, ing.unit) : '—'}
-                                </td>
-                                <td className="py-2.5 pr-4 text-[13px] text-text-muted w-8 align-top">
-                                  {ing.quantity != null ? displayUnit(ing.unit) : ''}
-                                </td>
-                                <td className="py-2.5 text-[15px] text-text-primary align-top">
-                                  {ing.ingredient_name}
-                                  {ing.preparation_note && (
-                                    <span className="text-text-muted text-[14px]">, {ing.preparation_note}</span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
+                            {ings.map(ing => {
+                              const heading = bracketHeading(ing.ingredient_name)
+                              if (heading) {
+                                return (
+                                  <tr key={ing.id}>
+                                    <td colSpan={3} className="pt-4 pb-1.5">
+                                      <span className="text-[13px] font-bold tracking-wide" style={{ color: '#C8973A' }}>
+                                        {heading}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                )
+                              }
+                              return (
+                                <tr key={ing.id} className="border-b" style={{ borderColor: 'rgba(126,184,247,0.08)' }}>
+                                  <td className="py-2.5 pr-2 text-[14px] text-text-muted tabular-nums w-14 text-right align-top">
+                                    {ing.quantity != null ? formatQty(ing.quantity, ing.unit) : '—'}
+                                  </td>
+                                  <td className="py-2.5 pr-4 text-[13px] text-text-muted w-8 align-top">
+                                    {ing.quantity != null ? displayUnit(ing.unit) : ''}
+                                  </td>
+                                  <td className="py-2.5 text-[15px] text-text-primary align-top">
+                                    {ing.ingredient_name}
+                                    {ing.preparation_note && (
+                                      <span className="text-text-muted text-[14px]">, {ing.preparation_note}</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              )
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -171,17 +185,33 @@ export default async function RecipePage({ params }: Props) {
                 <SectionHeading color={venue.theme_color}>Method</SectionHeading>
                 {steps.length > 0 ? (
                   <ol className="space-y-4">
-                    {steps.map((step, i) => (
-                      <li key={step.id} className="flex gap-4">
-                        <span
-                          className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold leading-none mt-0.5"
-                          style={{ background: venue.theme_color, color: '#FFFFFF' }}
-                        >
-                          {i + 1}
-                        </span>
-                        <p className="text-[15px] text-text-primary leading-relaxed pt-0.5">{step.instruction}</p>
-                      </li>
-                    ))}
+                    {(() => {
+                      let stepNum = 0
+                      return steps.map(step => {
+                        const heading = bracketHeading(step.instruction)
+                        if (heading) {
+                          return (
+                            <li key={step.id} className="pt-2 list-none">
+                              <span className="text-[14px] font-bold tracking-wide" style={{ color: '#C8973A' }}>
+                                {heading}
+                              </span>
+                            </li>
+                          )
+                        }
+                        stepNum++
+                        return (
+                          <li key={step.id} className="flex gap-4">
+                            <span
+                              className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold leading-none mt-0.5"
+                              style={{ background: venue.theme_color, color: '#FFFFFF' }}
+                            >
+                              {stepNum}
+                            </span>
+                            <p className="text-[15px] text-text-primary leading-relaxed pt-0.5">{step.instruction}</p>
+                          </li>
+                        )
+                      })
+                    })()}
                   </ol>
                 ) : (
                   <p className="text-text-muted text-[14px]">No method added yet.</p>
@@ -294,6 +324,11 @@ function NoSupabasePlaceholder({ venueName, venueId, sectionId, sectionName }: {
       </div>
     </div>
   )
+}
+
+function bracketHeading(text: string): string | null {
+  const m = text.match(/^\[(.+)\]$/)
+  return m ? m[1] : null
 }
 
 function formatQty(qty: number, unit: string | null): string {

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "migrate:pastry": "npx tsx --env-file=.env.local scripts/migrate-cheftap-pastry.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
