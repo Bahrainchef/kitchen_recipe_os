@@ -20,9 +20,9 @@ export const metadata: Metadata = {
   title: 'Kitchen Recipe OS | BahrainChef',
   description: 'Multi-venue recipe management for Bahrain and Saudi Arabia F&B group',
   icons: {
-    icon: '/Favicon_Kitchen_recipe_os.png',
-    apple: '/Favicon_Kitchen_recipe_os.png',
-    shortcut: '/Favicon_Kitchen_recipe_os.png',
+    icon: '/favicon.png',
+    apple: '/favicon.png',
+    shortcut: '/favicon.png',
   },
 }
 
@@ -46,9 +46,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <link rel="icon" href="/Favicon_Kitchen_recipe_os.png" type="image/png" />
-        <link rel="shortcut icon" href="/Favicon_Kitchen_recipe_os.png" />
-        <link rel="apple-touch-icon" href="/Favicon_Kitchen_recipe_os.png" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="shortcut icon" href="/favicon.png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
       </head>
       <body className="font-sans antialiased min-h-screen bg-canvas text-text-primary">
         {children}
