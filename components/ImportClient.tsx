@@ -70,8 +70,41 @@ export function ImportClient({ venues, sections }: Props) {
 
       await Promise.all(files.map(async (file) => {
         const source_file = file.name
-        const buffer = await file.arrayBuffer()
-        const workbook = xlsx.read(buffer, { type: 'array', cellFormula: false })
+
+        // Per-file error isolation — one corrupt file must not crash the whole batch
+        let workbook: Awaited<ReturnType<typeof xlsx.read>>
+        try {
+          const buffer = await file.arrayBuffer()
+          // First attempt: standard options
+          try {
+            workbook = xlsx.read(buffer, { type: 'array', cellFormula: false })
+          } catch {
+            // Fallback: some xlsx files from Google Sheets / LibreOffice use non-standard
+            // ZIP compression headers — try without cellFormula flag
+            workbook = xlsx.read(buffer, { type: 'array' })
+          }
+        } catch (e) {
+          // File is unreadable — add a single error row so it appears in the review table
+          allRecipes.push({
+            source_file,
+            tab_name: source_file,
+            venue_name: null,
+            matched_venue_id: null,
+            title: source_file,
+            portion_size: null,
+            recipe_size: null,
+            selling_price: null,
+            total_cost: null,
+            cost_per_portion: null,
+            ingredients: [],
+            steps: [],
+            status: 'error',
+            errors: [`Cannot read file: ${String(e)}`],
+            warnings: [],
+          })
+          return
+        }
+
         const fileRecipes: ParsedRecipeWithSource[] = []
 
         if (format === 'standard-recipe-card') {
