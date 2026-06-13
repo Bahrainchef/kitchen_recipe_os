@@ -1,8 +1,5 @@
 import type { ParsedIngredient, ParsedRecipe } from './parser'
 
-type XLSXCell = { v?: unknown; w?: string; t?: string } | undefined
-type XLSXSheet = Record<string, XLSXCell>
-
 // D12 venue hashtag → venue id + display name
 const VENUE_TAG_MAP: Record<string, { id: string; name: string }> = {
   '#oneteamonedream': {
@@ -11,22 +8,24 @@ const VENUE_TAG_MAP: Record<string, { id: string; name: string }> = {
   },
 }
 
-function cellStr(sheet: XLSXSheet, addr: string): string {
-  const cell = sheet[addr]
-  if (!cell || cell.v == null) return ''
-  return String(cell.v).trim()
+// Read a cell from a 2D row array (0-indexed row and col).
+function getStr(rows: unknown[][], row: number, col: number): string {
+  const r = rows[row]
+  if (!r) return ''
+  const v = (r as unknown[])[col]
+  if (v == null) return ''
+  return String(v).trim()
 }
 
-function cellNum(sheet: XLSXSheet, addr: string): number | null {
-  const cell = sheet[addr]
-  if (!cell || cell.v == null) return null
-  const n = parseFloat(String(cell.v))
+function getNum(rows: unknown[][], row: number, col: number): number | null {
+  const s = getStr(rows, row, col)
+  if (!s) return null
+  const n = parseFloat(s)
   return isNaN(n) ? null : n
 }
 
 // Weights are stored as kg decimals (0.25 = 250 gr).
-// gr/ml: multiply by 1000 and round to whole number.
-// each/unit: round to whole number, no scaling.
+// gr/ml: ×1000 and round. each/unit: round only.
 function convertQuantity(raw: number, unit: string | null): number {
   const u = (unit ?? '').toLowerCase().trim()
   if (u === 'gr' || u === 'g' || u === 'ml') return Math.round(raw * 1000)
@@ -43,73 +42,74 @@ function toTitleCase(s: string): string {
     .join(' ')
 }
 
-// Standard Recipe Card format:
-//   D3  = Recipe name (ALL CAPS)
-//   D4  = Subtitle / description (ALL CAPS, optional)
-//   D5  = Recipe size (yield/batch)
-//   D6  = Number of portions (default 1 if empty)
-//   D12 = Venue hashtag, e.g. "#OneTeamOneDream"
-//   B15:B39 = Ingredient weight as kg decimal (0.25 = 250 gr)
-//   C15:C39 = Unit (gr, ml, each …)
-//   D15:D39 = Ingredient name
-//   E15:E39 = Preparation note (optional)
-//   G40 = Total recipe cost (optional)
-//   B42+    = Method steps — one per row, stop at first empty row
+// Standard Recipe Card — cell map (1-based Excel → 0-based array index):
+//   D3  = rows[2][3]  — Recipe name
+//   D4  = rows[3][3]  — Subtitle / description
+//   D5  = rows[4][3]  — Recipe size (yield/batch)
+//   D6  = rows[5][3]  — Number of portions (default 1 if empty)
+//   D12 = rows[11][3] — Venue hashtag, e.g. "#OneTeamOneDream"
+//   B15:B39 = rows[14..38][1] — Ingredient weight as kg decimal
+//   C15:C39 = rows[14..38][2] — Unit (gr, ml, each …)
+//   D15:D39 = rows[14..38][3] — Ingredient name
+//   E15:E39 = rows[14..38][4] — Preparation note (optional)
+//   G40 = rows[39][6]         — Total recipe cost (optional)
+//   B42+ = rows[41+][1]       — Method steps, stop at first empty row
+//
+// Receives a 2D row array from xlsx.utils.sheet_to_json(sheet, { header:1, defval:'' })
+// so merged cells are resolved correctly regardless of their A1 address.
 export function parseStandardRecipeSheet(
-  sheet: XLSXSheet,
+  rows: unknown[][],
   tabName: string,
 ): ParsedRecipe {
-  // ── Venue: read D12 hashtag ───────────────────────────────────────────────
-  const venueTag         = cellStr(sheet, 'D12').toLowerCase()
+  // ── Venue: D12 = rows[11][3] ─────────────────────────────────────────────
+  const venueTagRaw      = getStr(rows, 11, 3)
+  const venueTag         = venueTagRaw.toLowerCase()
   const venueMatch       = VENUE_TAG_MAP[venueTag] ?? null
   const matched_venue_id = venueMatch?.id   ?? null
-  const venue_name       = venueMatch?.name ?? (cellStr(sheet, 'D12') || null)
+  const venue_name       = venueMatch?.name ?? (venueTagRaw || null)
 
   // ── Recipe metadata ───────────────────────────────────────────────────────
-  const nameRaw  = cellStr(sheet, 'D3')
-  const subtitleRaw = cellStr(sheet, 'D4')
+  const nameRaw     = getStr(rows, 2, 3)   // D3
+  const subtitleRaw = getStr(rows, 3, 3)   // D4
 
-  // Combine D3 + D4 into title; convert from ALL CAPS to Title Case
   const combinedRaw = nameRaw && subtitleRaw
     ? `${nameRaw} — ${subtitleRaw}`
     : nameRaw
-  const title = combinedRaw ? toTitleCase(combinedRaw) : null
+  const title       = combinedRaw ? toTitleCase(combinedRaw) : null
+  const description = subtitleRaw ? toTitleCase(subtitleRaw) : null
 
-  // D4 alone becomes the description field
-  const description  = subtitleRaw ? toTitleCase(subtitleRaw) : null
+  const recipe_size  = getNum(rows, 4, 3)        // D5
+  const portion_size = getNum(rows, 5, 3) ?? 1   // D6, default 1
+  const total_cost   = getNum(rows, 39, 6)        // G40
 
-  const recipe_size  = cellNum(sheet, 'D5')
-  const portion_size = cellNum(sheet, 'D6') ?? 1   // default 1 if empty
-  const total_cost   = cellNum(sheet, 'G40')
-
-  // ── Ingredients: rows 15–39 ──────────────────────────────────────────────
+  // ── Ingredients: rows 15–39 = array indices 14–38 ───────────────────────
   const ingredients: ParsedIngredient[] = []
 
-  for (let row = 15; row <= 39; row++) {
-    const name = cellStr(sheet, `D${row}`)
-    if (!name) continue                                 // skip rows with no ingredient name
+  for (let i = 14; i <= 38; i++) {
+    const name = getStr(rows, i, 3)                   // col D
+    if (!name) continue
 
-    const weightRaw = cellNum(sheet, `B${row}`)
-    if (weightRaw === null || weightRaw === 0) continue // skip missing / zero-weight rows
+    const weightRaw = getNum(rows, i, 1)              // col B
+    if (weightRaw === null || weightRaw === 0) continue
 
-    const unitRaw  = cellStr(sheet, `C${row}`)
+    const unitRaw  = getStr(rows, i, 2)               // col C
     const unit     = unitRaw ? unitRaw.toLowerCase() : null
-    const prepNote = cellStr(sheet, `E${row}`) || null
+    const prepNote = getStr(rows, i, 4) || null       // col E
 
     ingredients.push({
-      quantity:   convertQuantity(weightRaw, unit),   // 0.25 gr → 250
+      quantity:   convertQuantity(weightRaw, unit),
       unit,
       name,
       prep_note:  prepNote,
       group_name: null,
-      row,
+      row:        i + 1,                              // 1-based for error messages
     })
   }
 
-  // ── Method steps: B42 onwards, stop at first empty row ──────────────────
+  // ── Method steps: B42+ = array index 41+, stop at first empty ───────────
   const steps: string[] = []
-  for (let row = 42; row <= 100; row++) {
-    const text = cellStr(sheet, `B${row}`)
+  for (let i = 41; i < rows.length; i++) {
+    const text = getStr(rows, i, 1)                   // col B
     if (!text) break
     steps.push(text)
   }
@@ -119,7 +119,7 @@ export function parseStandardRecipeSheet(
   const warnings: string[] = []
 
   if (!title)            errors.push('Recipe name missing (D3)')
-  if (!matched_venue_id) errors.push(`Unknown venue tag in D12: "${cellStr(sheet, 'D12') || 'empty'}"`)
+  if (!matched_venue_id) errors.push(`Unknown venue tag in D12: "${venueTagRaw || 'empty'}"`)
 
   if (ingredients.length === 0) warnings.push('No ingredients found (rows 15–39)')
   if (steps.length === 0)       warnings.push('No method steps found (row 42+)')
@@ -128,7 +128,7 @@ export function parseStandardRecipeSheet(
     errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'ok'
 
   return {
-    tab_name: tabName,
+    tab_name:         tabName,
     venue_name,
     matched_venue_id,
     title,

@@ -59,10 +59,9 @@ export function ImportClient({ venues, sections }: Props) {
         for (const sheetName of workbook.SheetNames) {
           if (shouldSkipTab(sheetName)) { skipped.push(sheetName); continue }
           const sheet = workbook.Sheets[sheetName]
-          const recipe = parseStandardRecipeSheet(
-            sheet as Record<string, { v?: unknown; w?: string; t?: string }>,
-            sheetName,
-          )
+          // Convert to 2D array so merged cells resolve correctly regardless of A1 address
+          const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][]
+          const recipe = parseStandardRecipeSheet(rows, sheetName)
           recipes.push(recipe)
         }
       } else {
