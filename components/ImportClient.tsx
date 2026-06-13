@@ -181,46 +181,18 @@ export function ImportClient({ venues, sections }: Props) {
     }
   }, [venues, sections, format])
 
-  // ── Folder drag-and-drop — recursively finds .xlsx/.xls files ─────────────
-  const collectFromEntry = useCallback(async (entry: FileSystemEntry): Promise<File[]> => {
-    if (entry.isFile) {
-      return new Promise(resolve => {
-        (entry as FileSystemFileEntry).file(f => resolve(isExcelFile(f) ? [f] : []))
-      })
-    }
-    if (entry.isDirectory) {
-      const reader = (entry as FileSystemDirectoryEntry).createReader()
-      const entries: FileSystemEntry[] = await new Promise(resolve =>
-        reader.readEntries(e => resolve(Array.from(e) as FileSystemEntry[]))
-      )
-      const nested = await Promise.all(entries.map(collectFromEntry))
-      return nested.flat()
-    }
-    return []
-  }, [])
-
-  const onDrop = useCallback(async (e: React.DragEvent) => {
+  // Drop zone: accepts multiple individual .xlsx files dragged together.
+  // Folder drag-and-drop is blocked by browsers — use the folder picker button instead.
+  const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDragging(false)
-
-    const items = Array.from(e.dataTransfer.items)
-    const entries = items
-      .map(item => item.webkitGetAsEntry?.())
-      .filter((x): x is FileSystemEntry => x != null)
-
-    let files: File[] = []
-    if (entries.length > 0) {
-      files = (await Promise.all(entries.map(collectFromEntry))).flat()
-    } else {
-      files = Array.from(e.dataTransfer.files).filter(isExcelFile)
-    }
-
+    const files = Array.from(e.dataTransfer.files).filter(isExcelFile)
     if (files.length === 0) {
-      setParseError('No .xlsx or .xls files found.')
+      setParseError('No .xlsx or .xls files found. Drag individual Excel files, not a folder.')
       return
     }
     parseFiles(files)
-  }, [parseFiles, collectFromEntry])
+  }, [parseFiles])
 
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []).filter(isExcelFile)
@@ -378,7 +350,7 @@ export function ImportClient({ venues, sections }: Props) {
           onDragOver={e => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
-          className="rounded-card flex flex-col items-center justify-center gap-4 py-14 px-8 text-center transition-colors"
+          className="rounded-card flex flex-col items-center justify-center gap-5 py-14 px-8 text-center transition-colors"
           style={{
             border: `2px dashed ${dragging ? '#C8973A' : 'rgba(26,23,20,0.18)'}`,
             background: dragging ? 'rgba(200,151,58,0.04)' : '#FFFFFF',
@@ -389,26 +361,27 @@ export function ImportClient({ venues, sections }: Props) {
               <path d="M12 3v13M7 8l5-5 5 5M4 19h16" stroke="#9A9490" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <div>
-            <p className="font-fraunces text-[17px] text-[#1A1714] mb-1">Drop multiple Excel files or a folder here</p>
-            <p className="text-[#7A7470] text-[13px]">Each worksheet tab becomes one recipe</p>
-          </div>
+
+          {/* Buttons */}
           <div className="flex gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="text-[12px] font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-75"
+              className="text-[13px] font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-75"
               style={{ background: '#1A1714', color: '#FFFFFF' }}
             >
-              Choose files
+              Select Files
             </button>
             <button
               onClick={() => folderInputRef.current?.click()}
-              className="text-[12px] font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-75"
-              style={{ background: 'rgba(26,23,20,0.08)', color: '#1A1714' }}
+              className="text-[13px] font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-75"
+              style={{ background: 'rgba(26,23,20,0.08)', color: '#1A1714', border: '1px solid rgba(26,23,20,0.12)' }}
             >
-              Choose folder
+              Select Folder
             </button>
           </div>
+
+          <p className="text-[#9A9490] text-[12px]">or drag multiple .xlsx files here</p>
+
           <input ref={fileInputRef}   type="file" multiple accept=".xlsx,.xls" className="hidden" onChange={onFileChange} />
           <input ref={folderInputRef} type="file" multiple                      className="hidden" onChange={onFileChange} />
         </div>
