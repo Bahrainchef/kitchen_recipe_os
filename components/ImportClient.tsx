@@ -28,7 +28,6 @@ interface Props {
 export function ImportClient({ venues, sections }: Props) {
   const [stage, setStage] = useState<Stage>('upload')
   const [format, setFormat] = useState<ImportFormat>('venue-cost-sheet')
-  const [srcVenueId, setSrcVenueId] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
   const [parsed, setParsed] = useState<ParsedRecipe[]>([])
@@ -57,15 +56,12 @@ export function ImportClient({ venues, sections }: Props) {
 
       if (format === 'standard-recipe-card') {
         const { parseStandardRecipeSheet } = await import('@/lib/excel/parser-standard-recipe')
-        const srcVenue = venues.find(v => v.id === srcVenueId) ?? null
         for (const sheetName of workbook.SheetNames) {
           if (shouldSkipTab(sheetName)) { skipped.push(sheetName); continue }
           const sheet = workbook.Sheets[sheetName]
           const recipe = parseStandardRecipeSheet(
             sheet as Record<string, { v?: unknown; w?: string; t?: string }>,
             sheetName,
-            srcVenueId,
-            srcVenue?.name ?? null,
           )
           recipes.push(recipe)
         }
@@ -125,21 +121,18 @@ export function ImportClient({ venues, sections }: Props) {
     } catch (e) {
       setParseError(`Failed to parse file: ${String(e)}`)
     }
-  }, [venues, sections, format, srcVenueId])
+  }, [venues, sections, format])
 
   const isExcelFile = (file: File) =>
     file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
 
-  const canUpload = format === 'venue-cost-sheet' || srcVenueId !== null
-
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDragging(false)
-    if (!canUpload) return
     const file = e.dataTransfer.files[0]
     if (file && isExcelFile(file)) parseFile(file)
     else setParseError('Please upload an .xlsx or .xls file.')
-  }, [parseFile, canUpload])
+  }, [parseFile])
 
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -208,7 +201,6 @@ export function ImportClient({ venues, sections }: Props) {
   // ── Upload stage ───────────────────────────────────────────────────────────
   if (stage === 'upload') {
     const isSRC = format === 'standard-recipe-card'
-    const srcVenue = venues.find(v => v.id === srcVenueId) ?? null
 
     const venueSheetCells = [
       ['B1', 'Outlet / venue name'],
@@ -259,56 +251,37 @@ export function ImportClient({ venues, sections }: Props) {
           ))}
         </div>
 
-        {/* Venue selector — only for Standard Recipe Card */}
+        {/* Fixed venue label — Standard Recipe Card always targets One Team One Dream */}
         {isSRC && (
           <div
-            className="rounded-lg px-4 py-3.5 mb-5"
-            style={{ border: '1px solid rgba(26,23,20,0.12)', background: '#FFFFFF' }}
+            className="rounded-lg px-4 py-3 mb-5 flex items-center justify-between"
+            style={{ border: '1px solid rgba(22,163,74,0.25)', background: 'rgba(22,163,74,0.05)' }}
           >
-            <label className="block text-[12px] font-semibold text-[#4A4540] mb-2 tracking-wide uppercase">
-              Destination venue
-            </label>
-            <select
-              value={srcVenueId ?? ''}
-              onChange={e => setSrcVenueId(e.target.value || null)}
-              className="w-full text-[14px] rounded-lg px-3 py-2 transition-colors"
-              style={{
-                border: '1px solid rgba(26,23,20,0.15)',
-                background: '#FAFAF9',
-                color: srcVenueId ? '#1A1714' : '#9A9490',
-                outline: 'none',
-              }}
+            <div>
+              <p className="text-[11px] font-semibold text-[#4A4540] uppercase tracking-wide mb-0.5">
+                Destination venue
+              </p>
+              <p className="text-[14px] font-medium text-[#1A1714]">One Team One Dream</p>
+            </div>
+            <span
+              className="text-[11px] font-medium px-2 py-0.5 rounded"
+              style={{ background: 'rgba(22,163,74,0.12)', color: '#15803d' }}
             >
-              <option value="">— Select venue —</option>
-              {venues.map(v => (
-                <option key={v.id} value={v.id}>{v.name}</option>
-              ))}
-            </select>
-            {!srcVenueId && (
-              <p className="mt-2 text-[11px] text-[#7A4500]">
-                Select a venue before uploading — all tabs will be imported into this venue.
-              </p>
-            )}
-            {srcVenue && (
-              <p className="mt-2 text-[11px] text-[#15803d]">
-                All recipe tabs will be imported into <strong>{srcVenue.name}</strong>
-              </p>
-            )}
+              Auto-detected from D12
+            </span>
           </div>
         )}
 
         {/* Drop zone */}
         <div
-          onDragOver={e => { e.preventDefault(); if (canUpload) setDragging(true) }}
+          onDragOver={e => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
-          onClick={() => { if (canUpload) inputRef.current?.click() }}
-          className="rounded-card flex flex-col items-center justify-center gap-4 py-16 px-8 text-center transition-colors"
+          onClick={() => inputRef.current?.click()}
+          className="cursor-pointer rounded-card flex flex-col items-center justify-center gap-4 py-16 px-8 text-center transition-colors"
           style={{
             border: `2px dashed ${dragging ? '#C8973A' : 'rgba(26,23,20,0.18)'}`,
             background: dragging ? 'rgba(200,151,58,0.04)' : '#FFFFFF',
-            cursor: canUpload ? 'pointer' : 'not-allowed',
-            opacity: canUpload ? 1 : 0.45,
           }}
         >
           <div
@@ -320,29 +293,16 @@ export function ImportClient({ venues, sections }: Props) {
             </svg>
           </div>
           <div>
-            <p className="font-fraunces text-[17px] text-[#1A1714] mb-1">
-              {canUpload ? 'Drop your workbook here' : 'Select a venue first'}
-            </p>
-            <p className="text-[#7A7470] text-[13px]">
-              {canUpload ? 'or click to browse — .xlsx or .xls files' : 'then drop your .xlsx file here'}
-            </p>
+            <p className="font-fraunces text-[17px] text-[#1A1714] mb-1">Drop your workbook here</p>
+            <p className="text-[#7A7470] text-[13px]">or click to browse — .xlsx or .xls files</p>
           </div>
-          {canUpload && (
-            <div
-              className="text-[11px] text-[#7A7470] px-3 py-1.5 rounded-lg"
-              style={{ background: 'rgba(26,23,20,0.04)', border: '1px solid rgba(26,23,20,0.08)' }}
-            >
-              Each worksheet tab = one recipe
-            </div>
-          )}
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
-            onChange={onFileChange}
-            disabled={!canUpload}
-          />
+          <div
+            className="text-[11px] text-[#7A7470] px-3 py-1.5 rounded-lg"
+            style={{ background: 'rgba(26,23,20,0.04)', border: '1px solid rgba(26,23,20,0.08)' }}
+          >
+            Each worksheet tab = one recipe
+          </div>
+          <input ref={inputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={onFileChange} />
         </div>
 
         {parseError && (
