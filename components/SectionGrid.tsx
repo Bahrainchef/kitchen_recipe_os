@@ -3,11 +3,11 @@
 import Link from 'next/link'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Section, Recipe } from '@/lib/types/database.types'
+import type { Section } from '@/lib/types/database.types'
 
 interface Props {
   sections: Section[]
-  recipes: Recipe[]
+  recipeCounts: Record<string, number>
   venueId: string
   themeColor: string
 }
@@ -38,6 +38,7 @@ const SECTION_ICONS: Record<string, string> = {
   'sheesha menu':          '💨',
   'specials':              '⭐',
   'prep':                  '🔪',
+  'mezza':                 '🫙',
   'pizza':                 '🍕',
   'bread':                 '🍞',
   'bakery':                '🥖',
@@ -50,7 +51,8 @@ const SECTION_ICONS: Record<string, string> = {
   '60x40':                 '📐',
 }
 
-function getSectionIcon(name: string): string {
+function getSectionIcon(name: string, icon?: string | null): string {
+  if (icon) return icon
   return SECTION_ICONS[name.toLowerCase()] ?? '📋'
 }
 
@@ -67,9 +69,9 @@ function DragHandle() {
   )
 }
 
-export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
+export function SectionGrid({ sections, recipeCounts, venueId, themeColor }: Props) {
   const router = useRouter()
-  const recipeCount = (sectionId: string) => recipes.filter(r => r.section_id === sectionId).length
+  const recipeCount = (sectionId: string) => recipeCounts[sectionId] ?? 0
 
   const [reorderMode, setReorderMode] = useState(false)
   const [reorderItems, setReorderItems] = useState<Section[]>(sections)
@@ -235,7 +237,7 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
 
                 {/* Emoji */}
                 <span className="text-[26px] leading-none shrink-0 select-none">
-                  {getSectionIcon(section.name)}
+                  {getSectionIcon(section.name, section.icon)}
                 </span>
 
                 {/* Name + count */}
@@ -274,7 +276,7 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
         <div className="grid grid-cols-2 tablet:grid-cols-3 desktop:grid-cols-4 gap-4">
           {sections.map((section, i) => {
             const count = recipeCount(section.id)
-            const icon = getSectionIcon(section.name)
+            const icon = getSectionIcon(section.name, section.icon)
 
             return (
               <Link
@@ -309,19 +311,6 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
                   style={{ height: 3, background: themeColor }}
                 />
 
-                {/* Recipe count badge */}
-                <div className="absolute top-3.5 right-3.5">
-                  <span
-                    className="text-[11px] font-bold px-2 py-0.5 rounded-full tabular-nums"
-                    style={{
-                      background: `${themeColor}20`,
-                      color: themeColor,
-                      border: `1px solid ${themeColor}30`,
-                    }}
-                  >
-                    {count}
-                  </span>
-                </div>
 
                 {/* Card content */}
                 <div className="relative flex flex-col items-center justify-center text-center px-4 pt-7 pb-8 gap-3">
@@ -338,7 +327,7 @@ export function SectionGrid({ sections, recipes, venueId, themeColor }: Props) {
                     >
                       {section.name}
                     </h3>
-                    <span className="text-[11px] text-text-muted">
+                    <span className="text-[11px]" style={{ color: '#FFFFFF' }}>
                       {count} {count === 1 ? 'recipe' : 'recipes'}
                     </span>
                   </div>

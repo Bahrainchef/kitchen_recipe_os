@@ -2,7 +2,9 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useState, useRef, useCallback } from 'react'
 import type { Venue, Section } from '@/lib/types/database.types'
+import { useVenueImageUpload } from '@/lib/hooks/useVenueImageUpload'
 
 interface VenueCardProps {
   venue: Venue
@@ -20,6 +22,11 @@ const VENUE_GLOW: Record<string, string> = {
   'a1000000-0000-0000-0000-000000000006': '#4ecdc4',
   'a1000000-0000-0000-0000-000000000007': '#a78bfa',
   'a1000000-0000-0000-0000-000000000008': '#f090b8',
+  'a1000000-0000-0000-0000-000000000009': '#c45c70',
+}
+
+const VENUE_BADGE: Record<string, string> = {
+  'a1000000-0000-0000-0000-000000000009': 'Personal Collection',
 }
 
 const VENUE_INITIALS: Record<string, string> = {
@@ -31,6 +38,7 @@ const VENUE_INITIALS: Record<string, string> = {
   'a1000000-0000-0000-0000-000000000006': 'TFJ',
   'a1000000-0000-0000-0000-000000000007': 'V7',
   'a1000000-0000-0000-0000-000000000008': '✦',
+  'a1000000-0000-0000-0000-000000000009': '🌍',
 }
 
 const LOGO_BG: Record<string, string | 'theme'> = {
@@ -130,11 +138,38 @@ function LogoBadge({ venue }: { venue: Venue }) {
   )
 }
 
+function CameraIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M5 2h4l1.5 2H12a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h1.5L5 2z"
+        stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+      <circle cx="7" cy="7.5" r="1.8" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  )
+}
+
 export function VenueCard({ venue, sections, recipeCount = 0, animIndex = 0 }: VenueCardProps) {
+  const [coverUrl, setCoverUrl] = useState<string | null>(venue.cover_image_url ?? null)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const onSuccess = useCallback((url: string) => setCoverUrl(url), [])
+  const { progress, error, upload } = useVenueImageUpload(venue.id, onSuccess)
+
+  const handleFile = (file: File) => upload(file)
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(file)
+  }
+
   const flag = venue.country_code === 'BH' ? '🇧🇭' : venue.country_code === 'SA' ? '🇸🇦' : null
   const isPastryHub = venue.venue_type === 'pastry_hub'
   const glowColor = VENUE_GLOW[venue.id] ?? '#f090b8'
-  const hasCover = !!venue.cover_image_url
+  const hasCover = !!coverUrl
 
   const fallbackBg = isPastryHub
     ? 'linear-gradient(135deg, #d4608e 0%, #4a90d9 100%)'
@@ -146,20 +181,28 @@ export function VenueCard({ venue, sections, recipeCount = 0, animIndex = 0 }: V
       className="block anim-fade-up"
       style={{ animationDelay: `${animIndex * 70}ms` }}
     >
-      {/* Fixed height — 180px tablet / 220px desktop */}
       <article
         className="venue-card group relative overflow-hidden rounded-card"
         style={{
           height: 'var(--card-h, 220px)',
-          border: '1px solid rgba(42,74,138,0.55)',
+          border: isDragOver
+            ? '2px dashed rgba(255,255,255,0.70)'
+            : '1px solid rgba(42,74,138,0.55)',
           '--card-glow': glowColor,
           '--theme-color': venue.theme_color,
         } as React.CSSProperties}
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true) }}
+        onDragEnter={(e) => { e.preventDefault(); setIsDragOver(true) }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false)
+        }}
+        onDrop={handleDrop}
       >
         {/* ── Background ── */}
         {hasCover ? (
           <Image
-            src={venue.cover_image_url!}
+            key={coverUrl}
+            src={coverUrl!}
             alt={venue.name}
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
@@ -185,6 +228,77 @@ export function VenueCard({ venue, sections, recipeCount = 0, animIndex = 0 }: V
           }}
         />
 
+        {/* ── Drag-over overlay ── */}
+        {isDragOver && (
+          <div
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 pointer-events-none"
+            style={{ background: 'rgba(0,0,0,0.60)', backdropFilter: 'blur(4px)' }}
+          >
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <path d="M14 4v14M7 11l7-7 7 7" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M4 22h20" stroke="rgba(255,255,255,0.50)" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <span className="text-[12px] font-medium" style={{ color: '#fff' }}>Drop to update cover</span>
+          </div>
+        )}
+
+        {/* ── Upload progress bar ── */}
+        {progress !== null && (
+          <div className="absolute bottom-0 left-0 right-0 z-30" style={{ height: 3, background: 'rgba(0,0,0,0.30)' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${progress}%`,
+                background: glowColor,
+                transition: 'width 0.25s ease',
+                boxShadow: `0 0 6px ${glowColor}`,
+              }}
+            />
+          </div>
+        )}
+
+        {/* ── Error toast ── */}
+        {error && (
+          <div
+            className="absolute bottom-6 left-3 right-3 z-30 px-3 py-1.5 rounded-lg text-[11px] font-medium text-center pointer-events-none"
+            style={{ background: 'rgba(220,38,38,0.90)', color: '#fff', backdropFilter: 'blur(6px)' }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* ── Camera button (top-left, appears on hover) ── */}
+        <div className="absolute top-2 left-2 z-20">
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileInputRef.current?.click() }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center rounded-full"
+            style={{
+              width: 30, height: 30,
+              background: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(6px)',
+              border: '1px solid rgba(255,255,255,0.22)',
+              color: '#fff',
+            }}
+            title="Upload cover image"
+          >
+            <CameraIcon />
+          </button>
+        </div>
+
+        {/* ── Hidden file input ── */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) handleFile(f)
+            e.target.value = ''
+          }}
+        />
+
         {/* ── Accent glow line bottom ── */}
         <div
           className="absolute bottom-0 left-0 right-0 pointer-events-none"
@@ -204,7 +318,7 @@ export function VenueCard({ venue, sections, recipeCount = 0, animIndex = 0 }: V
                   border: '1px solid rgba(255,255,255,0.22)',
                 }}
               >
-                Pastry Hub
+                {VENUE_BADGE[venue.id] ?? 'Recipe Library'}
               </span>
             )}
           </div>

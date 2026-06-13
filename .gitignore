@@ -9,6 +9,20 @@ out/
 .env.local
 .env.*.local
 
+# TypeScript build cache
+tsconfig.tsbuildinfo
+
+# Vercel
+.vercel
+
 # misc
 .DS_Store
 *.pem
+
+# Loose image files in project root (uploaded to Supabase Storage instead)
+*.jpg
+*.jpeg
+*.png
+*.webp
+!/public/**
+!/Logos/**

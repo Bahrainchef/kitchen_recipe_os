@@ -16,11 +16,19 @@ export interface RecipePayload {
   cost_per_portion: number | null
   ingredients: ParsedIngredient[]
   steps: string[]
+  replace_recipe_id?: string
 }
 
 export interface PublishResult {
   tab_name: string
   success: boolean
   recipe_id?: string
+  replaced?: boolean
   error?: string
+}
+
+export interface DuplicateMatch {
+  tab_name: string
+  existing_id: string
+  existing_title: string
 }

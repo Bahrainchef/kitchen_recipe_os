@@ -47,7 +47,7 @@ async function getVenuesAndSections(): Promise<{
 export default async function DashboardPage() {
   const { venues, sections, totalRecipes, offlineReason } = await getVenuesAndSections()
 
-  const pastryHub = venues.find((v) => v.venue_type === 'pastry_hub')
+  const pastryHubs = venues.filter((v) => v.venue_type === 'pastry_hub')
   const bahrain = venues.filter((v) => v.venue_type === 'physical' && v.country_code === 'BH')
   const saudi = venues.filter((v) => v.venue_type === 'physical' && v.country_code === 'SA')
   const sectionsFor = (venueId: string) => sections.filter((s) => s.venue_id === venueId)
@@ -57,7 +57,7 @@ export default async function DashboardPage() {
   const countriesActive = [bahrain.length > 0, saudi.length > 0].filter(Boolean).length
 
   let idx = 0
-  const phIdx = pastryHub ? idx++ : -1
+  const phStart = idx; idx += pastryHubs.length
   const bhStart = idx; idx += bahrain.length
   const saStart = idx
 
@@ -102,8 +102,26 @@ export default async function DashboardPage() {
             </span>
           </div>
 
+          {/* Nav links */}
+          <nav className="hidden tablet:flex items-center gap-0.5">
+            {[
+              { href: '/ingredients', label: '🧅 Ingredients' },
+              { href: '/suppliers',   label: 'Suppliers' },
+              { href: '/costs',       label: 'Costs' },
+            ].map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors hover:bg-white/08"
+                style={{ color: 'rgba(240,244,255,0.70)' }}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+
           {/* Search bar */}
-          <div className="hidden tablet:flex flex-1 max-w-xs">
+          <div className="hidden desktop:flex flex-1 max-w-xs">
             <div
               className="flex items-center gap-2 w-full px-3 py-1.5 rounded-lg text-[13px] transition-all"
               style={{
@@ -216,12 +234,14 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Pastry Hub + Bahrain ── */}
-        {(pastryHub || bahrain.length > 0) && (
+        {/* ── Pastry Hub / Collections + Bahrain ── */}
+        {(pastryHubs.length > 0 || bahrain.length > 0) && (
           <section className="mb-14" aria-label="Bahrain venues">
-            {pastryHub && (
+            {pastryHubs.length > 0 && (
               <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 mb-10">
-                <VenueCard venue={pastryHub} sections={sectionsFor(pastryHub.id)} recipeCount={0} animIndex={phIdx} />
+                {pastryHubs.map((ph, i) => (
+                  <VenueCard key={ph.id} venue={ph} sections={sectionsFor(ph.id)} recipeCount={0} animIndex={phStart + i} />
+                ))}
               </div>
             )}
             {bahrain.length > 0 && <CountryHeader flag="🇧🇭" country="Bahrain" venueCount={bahrain.length} />}

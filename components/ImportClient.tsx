@@ -4,13 +4,13 @@ import { useState, useCallback, useRef } from 'react'
 import type { Venue, Section } from '@/lib/types/database.types'
 import type { ParsedRecipe } from '@/lib/excel/parser'
 import { shouldSkipTab } from '@/lib/excel/parser'
-import type { RecipePayload, PublishResult } from '@/app/import/actions'
+import type { RecipePayload, PublishResult, DuplicateMatch } from '@/app/import/actions'
 
 type Stage = 'upload' | 'review' | 'publishing' | 'done'
 
 const STATUS_CONFIG = {
   ok:      { label: '✓ OK',      bg: 'rgba(22,163,74,0.10)',  text: '#15803d' },
-  warning: { label: '⚠ Warning', bg: 'rgba(139,124,248,0.12)', text: '#6255CC' },
+  warning: { label: '⚠ Warning', bg: 'rgba(155,90,0,0.10)',    text: '#7A4500' },
   error:   { label: '✗ Error',   bg: 'rgba(220,38,38,0.10)',  text: '#dc2626' },
 }
 
@@ -30,6 +30,8 @@ export function ImportClient({ venues, sections }: Props) {
   const [results, setResults] = useState<PublishResult[]>([])
   const [parseError, setParseError] = useState<string | null>(null)
   const [skippedTabs, setSkippedTabs] = useState<string[]>([])
+  const [duplicates, setDuplicates] = useState<Record<string, DuplicateMatch>>({})
+  const [dupLoading, setDupLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const sectionsFor = (venueId: string | null) =>
@@ -69,6 +71,36 @@ export function ImportClient({ venues, sections }: Props) {
       }
       setSectionMap(autoSections)
       setStage('review')
+
+      // Async duplicate check — runs after review screen is visible
+      const checks = recipes
+        .filter(r => r.matched_venue_id && r.title?.trim())
+        .map(r => ({ tab_name: r.tab_name, venue_id: r.matched_venue_id!, title: r.title! }))
+
+      if (checks.length > 0) {
+        setDupLoading(true)
+        try {
+          const res = await fetch('/api/import/check-duplicates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(checks),
+          })
+          const matches: DuplicateMatch[] = await res.json()
+          const dupMap: Record<string, DuplicateMatch> = {}
+          for (const m of matches) dupMap[m.tab_name] = m
+          setDuplicates(dupMap)
+          // Auto-untick any row that already exists in the database
+          setSelected(prev => {
+            const next = new Set(prev)
+            for (const tabName of Object.keys(dupMap)) next.delete(tabName)
+            return next
+          })
+        } catch {
+          // Silent fail — duplicate detection is advisory, not blocking
+        } finally {
+          setDupLoading(false)
+        }
+      }
     } catch (e) {
       setParseError(`Failed to parse file: ${String(e)}`)
     }
@@ -121,6 +153,7 @@ export function ImportClient({ venues, sections }: Props) {
         cost_per_portion: r.cost_per_portion,
         ingredients: r.ingredients,
         steps: r.steps,
+        replace_recipe_id: duplicates[r.tab_name]?.existing_id,
       }))
 
     const response = await fetch('/api/import', {
@@ -142,6 +175,8 @@ export function ImportClient({ venues, sections }: Props) {
     setResults([])
     setParseError(null)
     setSkippedTabs([])
+    setDuplicates({})
+    setDupLoading(false)
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -156,7 +191,7 @@ export function ImportClient({ venues, sections }: Props) {
           onClick={() => inputRef.current?.click()}
           className="cursor-pointer rounded-card flex flex-col items-center justify-center gap-4 py-16 px-8 text-center transition-colors"
           style={{
-            border: `2px dashed ${dragging ? '#8B7CF8' : 'rgba(26,23,20,0.18)'}`,
+            border: `2px dashed ${dragging ? '#C8973A' : 'rgba(26,23,20,0.18)'}`,
             background: dragging ? 'rgba(200,151,58,0.04)' : '#FFFFFF',
           }}
         >
@@ -169,11 +204,11 @@ export function ImportClient({ venues, sections }: Props) {
             </svg>
           </div>
           <div>
-            <p className="font-fraunces text-[17px] text-text-primary mb-1">Drop your workbook here</p>
-            <p className="text-text-muted text-[13px]">or click to browse — .xlsx or .xls files</p>
+            <p className="font-fraunces text-[17px] text-[#1A1714] mb-1">Drop your workbook here</p>
+            <p className="text-[#7A7470] text-[13px]">or click to browse — .xlsx or .xls files</p>
           </div>
           <div
-            className="text-[11px] text-text-muted px-3 py-1.5 rounded-lg"
+            className="text-[11px] text-[#7A7470] px-3 py-1.5 rounded-lg"
             style={{ background: 'rgba(26,23,20,0.04)', border: '1px solid rgba(26,23,20,0.08)' }}
           >
             Each worksheet tab = one recipe
@@ -195,7 +230,7 @@ export function ImportClient({ venues, sections }: Props) {
           className="mt-6 rounded-card p-5"
           style={{ border: '1px solid rgba(26,23,20,0.09)', background: '#FFFFFF' }}
         >
-          <h3 className="font-fraunces text-[15px] text-text-primary mb-3">Expected cell layout</h3>
+          <h3 className="font-fraunces text-[15px] text-[#1A1714] mb-3">Expected cell layout</h3>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[12px]">
             {[
               ['B1', 'Outlet / venue name'],
@@ -217,7 +252,7 @@ export function ImportClient({ venues, sections }: Props) {
                 >
                   {cell}
                 </code>
-                <span className="text-text-muted">{desc}</span>
+                <span className="text-[#7A7470]">{desc}</span>
               </div>
             ))}
           </div>
@@ -230,9 +265,9 @@ export function ImportClient({ venues, sections }: Props) {
   if (stage === 'publishing') {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <div className="w-10 h-10 rounded-full border-2 border-[rgba(139,124,248,0.18)] border-t-[#8B7CF8] animate-spin" />
-        <p className="font-fraunces text-[18px] text-text-primary">Publishing recipes…</p>
-        <p className="text-text-muted text-[13px]">
+        <div className="w-10 h-10 rounded-full border-2 border-[rgba(26,23,20,0.12)] border-t-[#1A1714] animate-spin" />
+        <p className="font-fraunces text-[18px] text-[#1A1714]">Publishing recipes…</p>
+        <p className="text-[#7A7470] text-[13px]">
           Adding {selected.size} {selected.size === 1 ? 'recipe' : 'recipes'} to the database
         </p>
       </div>
@@ -264,13 +299,13 @@ export function ImportClient({ venues, sections }: Props) {
             )}
           </div>
           <div>
-            <p className="font-fraunces text-[17px] text-text-primary mb-0.5">
+            <p className="font-fraunces text-[17px] text-[#1A1714] mb-0.5">
               {succeeded.length === results.length
                 ? `All ${succeeded.length} recipes published`
                 : `${succeeded.length} of ${results.length} recipes published`}
             </p>
             {failed.length > 0 && (
-              <p className="text-[13px] text-text-secondary">
+              <p className="text-[13px] text-[#4A4540]">
                 {failed.length} {failed.length === 1 ? 'recipe' : 'recipes'} failed — see details below
               </p>
             )}
@@ -285,7 +320,7 @@ export function ImportClient({ venues, sections }: Props) {
             {results.map(r => (
               <div key={r.tab_name} className="px-5 py-3.5 flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-[14px] text-text-primary font-medium truncate">{r.tab_name}</p>
+                  <p className="text-[14px] text-[#1A1714] font-medium truncate">{r.tab_name}</p>
                   {!r.success && r.error && (
                     <p className="text-[12px] text-[#dc2626] mt-0.5">{r.error}</p>
                   )}
@@ -294,11 +329,13 @@ export function ImportClient({ venues, sections }: Props) {
                   className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded"
                   style={
                     r.success
-                      ? { background: 'rgba(22,163,74,0.10)', color: '#15803d' }
+                      ? r.replaced
+                        ? { background: 'rgba(200,151,58,0.15)', color: '#7A5A00' }
+                        : { background: 'rgba(22,163,74,0.10)', color: '#15803d' }
                       : { background: 'rgba(220,38,38,0.10)', color: '#dc2626' }
                   }
                 >
-                  {r.success ? 'Published' : 'Failed'}
+                  {r.success ? (r.replaced ? '↺ Replaced' : 'Published') : 'Failed'}
                 </span>
               </div>
             ))}
@@ -331,8 +368,8 @@ export function ImportClient({ venues, sections }: Props) {
             <path d="M9.5 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9.5 1.5z" stroke="#9A9490" strokeWidth="1.2" strokeLinejoin="round" />
             <path d="M9.5 1.5v4H13.5" stroke="#9A9490" strokeWidth="1.2" strokeLinejoin="round" />
           </svg>
-          <span className="text-[13px] text-text-primary font-medium truncate">{fileName}</span>
-          <span className="text-[12px] text-text-muted shrink-0">
+          <span className="text-[13px] text-[#1A1714] font-medium truncate">{fileName}</span>
+          <span className="text-[12px] text-[#7A7470] shrink-0">
             {parsed.length} {parsed.length === 1 ? 'recipe tab' : 'recipe tabs'} found
           </span>
           {skippedTabs.length > 0 && (
@@ -345,24 +382,39 @@ export function ImportClient({ venues, sections }: Props) {
             </span>
           )}
         </div>
-        <button
-          onClick={reset}
-          className="shrink-0 text-[12px] text-text-muted hover:text-text-secondary transition-colors"
-        >
-          Change file
-        </button>
+        <div className="flex items-center gap-3 shrink-0">
+          {dupLoading && (
+            <span className="text-[11px] text-[#7A4500] animate-pulse">
+              Checking for duplicates…
+            </span>
+          )}
+          {!dupLoading && Object.keys(duplicates).length > 0 && (
+            <span
+              className="text-[11px] font-medium px-2 py-0.5 rounded"
+              style={{ background: 'rgba(155,90,0,0.10)', color: '#7A4500' }}
+            >
+              {Object.keys(duplicates).length} duplicate{Object.keys(duplicates).length !== 1 ? 's' : ''} found
+            </span>
+          )}
+          <button
+            onClick={reset}
+            className="text-[12px] text-[#7A7470] hover:text-[#4A4540] transition-colors"
+          >
+            Change file
+          </button>
+        </div>
       </div>
 
       {/* Selection + publish bar */}
       <div className="flex items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
-          <span className="text-[13px] text-text-secondary">
+          <span className="text-[13px] text-[#4A4540]">
             {selected.size} of {selectableCount} selected
           </span>
-          <button onClick={selectAll} className="text-[12px] text-text-muted hover:text-text-secondary transition-colors">
+          <button onClick={selectAll} className="text-[12px] text-[#7A7470] hover:text-[#4A4540] transition-colors">
             Select all
           </button>
-          <button onClick={selectNone} className="text-[12px] text-text-muted hover:text-text-secondary transition-colors">
+          <button onClick={selectNone} className="text-[12px] text-[#7A7470] hover:text-[#4A4540] transition-colors">
             None
           </button>
         </div>
@@ -370,7 +422,7 @@ export function ImportClient({ venues, sections }: Props) {
           onClick={publish}
           disabled={selected.size === 0}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-opacity disabled:opacity-40"
-          style={{ background: '#1A1714', color: '#8B7CF8' }}
+          style={{ background: '#1A1714', color: '#FFFFFF' }}
         >
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
             <path d="M6.5 9V2M3.5 5l3-3 3 3M1.5 11h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -380,13 +432,14 @@ export function ImportClient({ venues, sections }: Props) {
       </div>
 
       {/* Review table */}
+      <div className="overflow-x-auto rounded-card" style={{ border: '1px solid rgba(26,23,20,0.09)' }}>
       <div
-        className="rounded-card overflow-hidden"
-        style={{ border: '1px solid rgba(26,23,20,0.09)' }}
+        className="overflow-hidden"
+        style={{ minWidth: 860, background: '#FFFFFF' }}
       >
         {/* Header */}
         <div
-          className="grid text-[11px] font-semibold tracking-[0.08em] uppercase text-text-muted px-5 py-2.5 gap-3"
+          className="grid text-[11px] font-semibold tracking-[0.08em] uppercase text-[#7A7470] px-5 py-2.5 gap-3"
           style={{
             background: 'rgba(26,23,20,0.03)',
             borderBottom: '1px solid rgba(26,23,20,0.07)',
@@ -418,7 +471,7 @@ export function ImportClient({ venues, sections }: Props) {
                 className="grid items-center px-5 py-3 gap-3 transition-colors"
                 style={{
                   gridTemplateColumns: '28px 140px 1fr 160px 200px 100px 80px',
-                  background: isChecked ? 'rgba(200,151,58,0.025)' : 'transparent',
+                  background: isChecked ? 'rgba(200,151,58,0.08)' : '#FFFFFF',
                 }}
               >
                 {/* Checkbox */}
@@ -427,23 +480,23 @@ export function ImportClient({ venues, sections }: Props) {
                   checked={isChecked}
                   disabled={isError}
                   onChange={() => toggleSelect(recipe.tab_name)}
-                  className="w-4 h-4 cursor-pointer accent-[#8B7CF8] disabled:opacity-30"
+                  className="w-4 h-4 cursor-pointer accent-[#1A1714] disabled:opacity-30"
                 />
 
                 {/* Tab name */}
-                <div className="text-[12px] text-text-muted font-mono truncate" title={recipe.tab_name}>
+                <div className="text-[12px] text-[#7A7470] font-mono truncate" title={recipe.tab_name}>
                   {recipe.tab_name}
                 </div>
 
                 {/* Recipe title */}
-                <div className="text-[13px] text-text-primary font-medium truncate">
+                <div className="text-[13px] text-[#1A1714] font-medium truncate">
                   {recipe.title ?? <span className="text-[#dc2626] font-normal">Missing</span>}
                 </div>
 
                 {/* Venue */}
                 <div className="text-[12px] truncate">
                   {matchedVenue
-                    ? <span className="text-text-secondary">{matchedVenue.name}</span>
+                    ? <span className="text-[#4A4540]">{matchedVenue.name}</span>
                     : recipe.venue_name
                       ? <span className="text-[#dc2626]">{recipe.venue_name} (no match)</span>
                       : <span className="text-[#dc2626]">Missing</span>
@@ -470,7 +523,7 @@ export function ImportClient({ venues, sections }: Props) {
                       ))}
                     </select>
                   ) : (
-                    <span className="text-[12px] text-text-muted">—</span>
+                    <span className="text-[12px] text-[#7A7470]">—</span>
                   )}
                 </div>
 
@@ -480,26 +533,67 @@ export function ImportClient({ venues, sections }: Props) {
                     <p key={i} className="text-[11px] text-[#dc2626] leading-snug">{e}</p>
                   ))}
                   {recipe.warnings.map((w, i) => (
-                    <p key={i} className="text-[11px] text-[#6255CC] leading-snug">{w}</p>
+                    <p key={i} className="text-[11px] leading-snug" style={{ color: '#7A4500' }}>{w}</p>
                   ))}
-                  <p className="text-[11px] text-text-muted">
+                  <p className="text-[11px] text-[#7A7470]">
                     {recipe.ingredients.filter(i => i.name).length} ingredients
                     {recipe.steps.length > 0 ? ` · ${recipe.steps.length} steps` : ''}
                     {recipe.cost_per_portion ? ` · ${recipe.cost_per_portion.toFixed(3)}/portion` : ''}
                   </p>
+                  {duplicates[recipe.tab_name] && (
+                    <div className="mt-1 pt-1" style={{ borderTop: '1px solid rgba(155,90,0,0.15)' }}>
+                      <p className="text-[11px] leading-snug" style={{ color: '#7A4500' }}>
+                        Matches: &ldquo;{duplicates[recipe.tab_name].existing_title}&rdquo;
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {isChecked ? (
+                          <button
+                            onClick={() => toggleSelect(recipe.tab_name)}
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded transition-opacity hover:opacity-70"
+                            style={{ background: 'rgba(26,23,20,0.07)', color: '#4A4540' }}
+                          >
+                            ✗ Skip instead
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => toggleSelect(recipe.tab_name)}
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded transition-opacity hover:opacity-70"
+                            style={{ background: 'rgba(155,90,0,0.12)', color: '#7A4500' }}
+                          >
+                            ↺ Replace existing
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Status */}
-                <span
-                  className="text-[11px] font-semibold px-2 py-0.5 rounded"
-                  style={{ background: sc.bg, color: sc.text }}
-                >
-                  {sc.label}
-                </span>
+                <div className="flex flex-col items-start gap-1">
+                  <span
+                    className="text-[11px] font-semibold px-2 py-0.5 rounded whitespace-nowrap"
+                    style={{ background: sc.bg, color: sc.text }}
+                  >
+                    {sc.label}
+                  </span>
+                  {duplicates[recipe.tab_name] && (
+                    <span
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded whitespace-nowrap"
+                      style={
+                        isChecked
+                          ? { background: 'rgba(200,151,58,0.15)', color: '#7A5A00' }
+                          : { background: 'rgba(155,90,0,0.10)', color: '#7A4500' }
+                      }
+                    >
+                      {isChecked ? '↺ Replace' : '⚠ Exists'}
+                    </span>
+                  )}
+                </div>
               </div>
             )
           })}
         </div>
+      </div>
       </div>
 
       {/* Sticky publish footer */}
@@ -508,14 +602,14 @@ export function ImportClient({ venues, sections }: Props) {
           className="mt-5 flex items-center justify-between gap-4 rounded-card px-5 py-4"
           style={{ border: '1px solid rgba(200,151,58,0.30)', background: 'rgba(200,151,58,0.05)' }}
         >
-          <p className="text-[13px] text-text-secondary">
-            Ready to publish <strong className="text-text-primary">{selected.size}</strong>{' '}
+          <p className="text-[13px] text-[#4A4540]">
+            Ready to publish <strong className="text-[#1A1714]">{selected.size}</strong>{' '}
             {selected.size === 1 ? 'recipe' : 'recipes'} as drafts
           </p>
           <button
             onClick={publish}
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-opacity hover:opacity-80"
-            style={{ background: '#1A1714', color: '#8B7CF8' }}
+            style={{ background: '#1A1714', color: '#FFFFFF' }}
           >
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <path d="M6.5 9V2M3.5 5l3-3 3 3M1.5 11h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />

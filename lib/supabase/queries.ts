@@ -1,4 +1,4 @@
-import type { Venue, Section, Recipe, RecipeIngredient, RecipeStep } from '@/lib/types/database.types'
+import type { Venue, Section, Recipe, RecipeIngredient, RecipeStep, IngredientMaster, SupplierPriceList, SupplierItem } from '@/lib/types/database.types'
 import { SEED_VENUES, SEED_SECTIONS } from '@/lib/seed-data'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -85,6 +85,33 @@ export async function getRecipesForVenue(venueId: string): Promise<Recipe[]> {
   } catch (e) { console.error('[queries] getRecipesForVenue exception:', e); return [] }
 }
 
+export async function getRecipeCountsForVenue(venueId: string): Promise<{ total: number; bySectionId: Record<string, number> }> {
+  const empty = { total: 0, bySectionId: {} }
+  if (!isSupabaseReady()) return empty
+  try {
+    const supabase = db()
+    // Fetch only section_id (tiny payload). range(0,9999) overrides PostgREST's
+    // default 1000-row cap so large venues like Pastry Hub never get truncated.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('recipes')
+      .select('section_id')
+      .eq('venue_id', venueId)
+      .range(0, 9999)
+    if (error) { console.error('[queries] getRecipeCountsForVenue:', error.message); return empty }
+    const bySectionId: Record<string, number> = {}
+    let total = 0
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const r of (data ?? []) as any[]) {
+      if (r.section_id) {
+        bySectionId[r.section_id] = (bySectionId[r.section_id] ?? 0) + 1
+        total++
+      }
+    }
+    return { total, bySectionId }
+  } catch (e) { console.error('[queries] getRecipeCountsForVenue exception:', e); return empty }
+}
+
 export async function getRecipeWithDetails(recipeId: string): Promise<{
   recipe: Recipe
   ingredients: RecipeIngredient[]
@@ -124,4 +151,101 @@ export async function getHeroPhotosForRecipes(recipeIds: string[]): Promise<Reco
     }
     return map
   } catch (e) { console.error('[queries] getHeroPhotosForRecipes exception:', e); return {} }
+}
+
+// ─── Ingredient Master ────────────────────────────────────────────────────────
+
+export interface IngredientWithUsage extends IngredientMaster {
+  recipe_count: number
+  venue_ids: string[]
+}
+
+export async function getIngredientMasterWithUsage(): Promise<IngredientWithUsage[]> {
+  if (!isSupabaseReady()) return []
+  try {
+    const supabase = db()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = supabase as any
+    const [{ data: ingredients, error }, { data: riRows }, { data: recipeRows }] = await Promise.all([
+      sb.from('ingredient_master').select('*').is('merged_into', null).order('canonical_name'),
+      sb.from('recipe_ingredients').select('ingredient_master_id, recipe_id').not('ingredient_master_id', 'is', null),
+      sb.from('recipes').select('id, venue_id').neq('status', 'archived'),
+    ])
+    if (error) { console.error('[queries] getIngredientMasterWithUsage:', error.message); return [] }
+
+    const venueByRecipe = new Map<string, string>()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const r of (recipeRows ?? []) as any[]) venueByRecipe.set(r.id, r.venue_id)
+
+    const usageMap = new Map<string, { recipes: Set<string>; venues: Set<string> }>()
+    for (const ri of riRows ?? []) {
+      if (!ri.ingredient_master_id) continue
+      const entry = usageMap.get(ri.ingredient_master_id) ?? { recipes: new Set(), venues: new Set() }
+      entry.recipes.add(ri.recipe_id)
+      const vid = venueByRecipe.get(ri.recipe_id)
+      if (vid) entry.venues.add(vid)
+      usageMap.set(ri.ingredient_master_id, entry)
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (ingredients ?? [] as any[]).map((ing: any) => {
+      const u = usageMap.get(ing.id)
+      return { ...ing, recipe_count: u?.recipes.size ?? 0, venue_ids: u ? [...u.venues] : [] } as IngredientWithUsage
+    })
+  } catch (e) { console.error('[queries] getIngredientMasterWithUsage exception:', e); return [] }
+}
+
+// ─── Suppliers ────────────────────────────────────────────────────────────────
+
+export interface SupplierWithItems extends SupplierPriceList {
+  items: SupplierItem[]
+}
+
+export async function getSupplierPriceListsWithItems(): Promise<SupplierWithItems[]> {
+  if (!isSupabaseReady()) return []
+  try {
+    const supabase = db()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = supabase as any
+    const [{ data: lists, error }, { data: items }] = await Promise.all([
+      sb.from('supplier_price_lists').select('*').order('supplier_name'),
+      sb.from('supplier_items').select('*').order('raw_ingredient_name'),
+    ])
+    if (error) { console.error('[queries] getSupplierPriceListsWithItems:', error.message); return [] }
+    const itemsByList = new Map<string, SupplierItem[]>()
+    for (const item of items ?? []) {
+      const list = itemsByList.get(item.supplier_price_list_id) ?? []
+      list.push(item)
+      itemsByList.set(item.supplier_price_list_id, list)
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (lists ?? [] as any[]).map((l: any) => ({ ...l, items: itemsByList.get(l.id) ?? [] } as SupplierWithItems))
+  } catch (e) { console.error('[queries] getSupplierPriceListsWithItems exception:', e); return [] }
+}
+
+// ─── Costs ────────────────────────────────────────────────────────────────────
+
+export interface RecipeWithCost {
+  id: string
+  venue_id: string
+  title: string
+  cost_percentage: number | null
+  cost_per_portion: number | null
+  selling_price: number | null
+  total_cost: number | null
+  status: string
+}
+
+export async function getRecipeCostData(): Promise<RecipeWithCost[]> {
+  if (!isSupabaseReady()) return []
+  try {
+    const supabase = db()
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('id, venue_id, title, cost_percentage, cost_per_portion, selling_price, total_cost, status')
+      .neq('status', 'archived')
+      .order('cost_percentage', { ascending: false })
+    if (error) { console.error('[queries] getRecipeCostData:', error.message); return [] }
+    return data ?? []
+  } catch (e) { console.error('[queries] getRecipeCostData exception:', e); return [] }
 }
