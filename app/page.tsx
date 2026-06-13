@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { SEED_VENUES, SEED_SECTIONS } from '@/lib/seed-data'
 import { VenueCard } from '@/components/VenueCard'
 import { DashboardHero } from '@/components/DashboardHero'
+import { UserNav } from '@/components/UserNav'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { Venue, Section } from '@/lib/types/database.types'
 
 async function getVenuesAndSections(): Promise<{
@@ -44,8 +47,23 @@ async function getVenuesAndSections(): Promise<{
   }
 }
 
+async function getProfile() {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = createAdminClient() as any
+    const { data } = await sb.from('profiles').select('full_name, email, role').eq('id', user.id).single()
+    return data ?? { full_name: '', email: user.email ?? '', role: 'staff' }
+  } catch { return null }
+}
+
 export default async function DashboardPage() {
-  const { venues, sections, totalRecipes, offlineReason } = await getVenuesAndSections()
+  const [{ venues, sections, totalRecipes, offlineReason }, profile] = await Promise.all([
+    getVenuesAndSections(),
+    getProfile(),
+  ])
 
   const pastryHubs = venues.filter((v) => v.venue_type === 'pastry_hub')
   const bahrain = venues.filter((v) => v.venue_type === 'physical' && v.country_code === 'BH')
@@ -146,25 +164,7 @@ export default async function DashboardPage() {
               </svg>
               Import
             </Link>
-            <button
-              className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-white/08"
-              style={{ color: 'rgba(240,244,255,0.40)' }}
-              aria-label="Notifications"
-            >
-              <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
-                <path d="M8.5 1.5a5 5 0 0 1 5 5c0 2.8 1.4 4.2 1.4 4.2H2.1S3.5 10.3 3.5 6.5a5 5 0 0 1 5-5zM6.6 13.6a1.9 1.9 0 0 0 3.8 0" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold select-none cursor-pointer hover:opacity-85 transition-opacity"
-              style={{
-                background: 'linear-gradient(135deg, #f090b8 0%, #4a90d9 100%)',
-                color: '#fff',
-                boxShadow: '0 2px 8px rgba(240,144,184,0.30)',
-              }}
-            >
-              P
-            </div>
+            <UserNav profile={profile} />
           </div>
         </div>
       </header>
