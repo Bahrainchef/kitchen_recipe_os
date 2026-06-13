@@ -24,6 +24,7 @@ export interface ParsedRecipe {
   venue_name: string | null
   matched_venue_id: string | null
   title: string | null
+  description?: string | null
   portion_size: number | null
   recipe_size: number | null
   selling_price: number | null

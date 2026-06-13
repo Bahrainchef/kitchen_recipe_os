@@ -9,6 +9,7 @@ export interface RecipePayload {
   venue_id: string
   section_id: string | null
   title: string
+  description?: string | null
   portion_size: number | null
   recipe_size: number | null
   selling_price: number | null

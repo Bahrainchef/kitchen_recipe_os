@@ -7,11 +7,17 @@ import { shouldSkipTab } from '@/lib/excel/parser'
 import type { RecipePayload, PublishResult, DuplicateMatch } from '@/app/import/actions'
 
 type Stage = 'upload' | 'review' | 'publishing' | 'done'
+type ImportFormat = 'venue-cost-sheet' | 'standard-recipe-card'
 
 const STATUS_CONFIG = {
   ok:      { label: '✓ OK',      bg: 'rgba(22,163,74,0.10)',  text: '#15803d' },
   warning: { label: '⚠ Warning', bg: 'rgba(155,90,0,0.10)',    text: '#7A4500' },
   error:   { label: '✗ Error',   bg: 'rgba(220,38,38,0.10)',  text: '#dc2626' },
+}
+
+const FORMAT_LABELS: Record<ImportFormat, string> = {
+  'venue-cost-sheet':    'Venue Cost Sheet',
+  'standard-recipe-card': 'Standard Recipe Card',
 }
 
 interface Props {
@@ -21,11 +27,12 @@ interface Props {
 
 export function ImportClient({ venues, sections }: Props) {
   const [stage, setStage] = useState<Stage>('upload')
+  const [format, setFormat] = useState<ImportFormat>('venue-cost-sheet')
+  const [srcVenueId, setSrcVenueId] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
   const [parsed, setParsed] = useState<ParsedRecipe[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  // section assignments per tab_name
   const [sectionMap, setSectionMap] = useState<Record<string, string | null>>({})
   const [results, setResults] = useState<PublishResult[]>([])
   const [parseError, setParseError] = useState<string | null>(null)
@@ -45,21 +52,37 @@ export function ImportClient({ venues, sections }: Props) {
       const buffer = await file.arrayBuffer()
       const workbook = xlsx.read(buffer, { type: 'array', cellFormula: false })
 
-      const { parseSheet } = await import('@/lib/excel/parser')
       const recipes: ParsedRecipe[] = []
-
       const skipped: string[] = []
-      for (const sheetName of workbook.SheetNames) {
-        if (shouldSkipTab(sheetName)) { skipped.push(sheetName); continue }
-        const sheet = workbook.Sheets[sheetName]
-        const recipe = parseSheet(sheet as Record<string, { v?: unknown; w?: string; t?: string }>, sheetName, venues)
-        recipes.push(recipe)
-      }
-      setSkippedTabs(skipped)
 
+      if (format === 'standard-recipe-card') {
+        const { parseStandardRecipeSheet } = await import('@/lib/excel/parser-standard-recipe')
+        const srcVenue = venues.find(v => v.id === srcVenueId) ?? null
+        for (const sheetName of workbook.SheetNames) {
+          if (shouldSkipTab(sheetName)) { skipped.push(sheetName); continue }
+          const sheet = workbook.Sheets[sheetName]
+          const recipe = parseStandardRecipeSheet(
+            sheet as Record<string, { v?: unknown; w?: string; t?: string }>,
+            sheetName,
+            srcVenueId,
+            srcVenue?.name ?? null,
+          )
+          recipes.push(recipe)
+        }
+      } else {
+        const { parseSheet } = await import('@/lib/excel/parser')
+        for (const sheetName of workbook.SheetNames) {
+          if (shouldSkipTab(sheetName)) { skipped.push(sheetName); continue }
+          const sheet = workbook.Sheets[sheetName]
+          const recipe = parseSheet(sheet as Record<string, { v?: unknown; w?: string; t?: string }>, sheetName, venues)
+          recipes.push(recipe)
+        }
+      }
+
+      setSkippedTabs(skipped)
       setParsed(recipes)
       setSelected(new Set(recipes.filter(r => r.status !== 'error').map(r => r.tab_name)))
-      // Pre-fill sections: if venue matched and it has exactly one section, auto-select it
+
       const autoSections: Record<string, string | null> = {}
       for (const r of recipes) {
         if (r.matched_venue_id) {
@@ -72,7 +95,6 @@ export function ImportClient({ venues, sections }: Props) {
       setSectionMap(autoSections)
       setStage('review')
 
-      // Async duplicate check — runs after review screen is visible
       const checks = recipes
         .filter(r => r.matched_venue_id && r.title?.trim())
         .map(r => ({ tab_name: r.tab_name, venue_id: r.matched_venue_id!, title: r.title! }))
@@ -89,14 +111,13 @@ export function ImportClient({ venues, sections }: Props) {
           const dupMap: Record<string, DuplicateMatch> = {}
           for (const m of matches) dupMap[m.tab_name] = m
           setDuplicates(dupMap)
-          // Auto-untick any row that already exists in the database
           setSelected(prev => {
             const next = new Set(prev)
             for (const tabName of Object.keys(dupMap)) next.delete(tabName)
             return next
           })
         } catch {
-          // Silent fail — duplicate detection is advisory, not blocking
+          // duplicate detection is advisory
         } finally {
           setDupLoading(false)
         }
@@ -104,18 +125,21 @@ export function ImportClient({ venues, sections }: Props) {
     } catch (e) {
       setParseError(`Failed to parse file: ${String(e)}`)
     }
-  }, [venues, sections])
+  }, [venues, sections, format, srcVenueId])
 
   const isExcelFile = (file: File) =>
     file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
 
+  const canUpload = format === 'venue-cost-sheet' || srcVenueId !== null
+
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDragging(false)
+    if (!canUpload) return
     const file = e.dataTransfer.files[0]
     if (file && isExcelFile(file)) parseFile(file)
     else setParseError('Please upload an .xlsx or .xls file.')
-  }, [parseFile])
+  }, [parseFile, canUpload])
 
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -146,6 +170,7 @@ export function ImportClient({ venues, sections }: Props) {
         venue_id: r.matched_venue_id!,
         section_id: sectionMap[r.tab_name] ?? null,
         title: r.title!,
+        description: r.description ?? null,
         portion_size: r.portion_size,
         recipe_size: r.recipe_size,
         selling_price: r.selling_price,
@@ -180,19 +205,110 @@ export function ImportClient({ venues, sections }: Props) {
     if (inputRef.current) inputRef.current.value = ''
   }
 
-  // ── Upload stage ──────────────────────────────────────────────────────────
+  // ── Upload stage ───────────────────────────────────────────────────────────
   if (stage === 'upload') {
+    const isSRC = format === 'standard-recipe-card'
+    const srcVenue = venues.find(v => v.id === srcVenueId) ?? null
+
+    const venueSheetCells = [
+      ['B1', 'Outlet / venue name'],
+      ['B3', 'Recipe title'],
+      ['B5', 'Portion size'],
+      ['B6', 'Recipe size'],
+      ['A10:A35', 'Ingredient quantities'],
+      ['B10:B35', 'Units'],
+      ['C10:C35', 'Ingredient name, prep note'],
+      ['A48:A65', 'Method steps'],
+      ['E45', 'Selling price'],
+      ['F38', 'Total cost'],
+      ['F39', 'Cost per portion'],
+    ]
+
+    const srcCells = [
+      ['D3', 'Recipe name'],
+      ['D4', 'Description'],
+      ['D5', 'Recipe size (yield)'],
+      ['D6', 'Number of portions'],
+      ['B15:B39', 'Ingredient weights (grams)'],
+      ['C15:C39', 'Unit (gr, ml, each …)'],
+      ['D15:D39', 'Ingredient name'],
+      ['E15:E39', 'Preparation note'],
+      ['G40', 'Total recipe cost'],
+      ['B42+', 'Method steps'],
+    ]
+
     return (
       <div className="max-w-[600px]">
+        {/* Format selector */}
         <div
-          onDragOver={e => { e.preventDefault(); setDragging(true) }}
+          className="flex rounded-lg overflow-hidden mb-5"
+          style={{ border: '1px solid rgba(26,23,20,0.12)' }}
+        >
+          {(['venue-cost-sheet', 'standard-recipe-card'] as ImportFormat[]).map(f => (
+            <button
+              key={f}
+              onClick={() => { setFormat(f); setParseError(null) }}
+              className="flex-1 px-4 py-2.5 text-[13px] font-semibold transition-colors"
+              style={format === f
+                ? { background: '#1A1714', color: '#FFFFFF' }
+                : { background: '#FFFFFF', color: '#7A7470' }
+              }
+            >
+              {FORMAT_LABELS[f]}
+            </button>
+          ))}
+        </div>
+
+        {/* Venue selector — only for Standard Recipe Card */}
+        {isSRC && (
+          <div
+            className="rounded-lg px-4 py-3.5 mb-5"
+            style={{ border: '1px solid rgba(26,23,20,0.12)', background: '#FFFFFF' }}
+          >
+            <label className="block text-[12px] font-semibold text-[#4A4540] mb-2 tracking-wide uppercase">
+              Destination venue
+            </label>
+            <select
+              value={srcVenueId ?? ''}
+              onChange={e => setSrcVenueId(e.target.value || null)}
+              className="w-full text-[14px] rounded-lg px-3 py-2 transition-colors"
+              style={{
+                border: '1px solid rgba(26,23,20,0.15)',
+                background: '#FAFAF9',
+                color: srcVenueId ? '#1A1714' : '#9A9490',
+                outline: 'none',
+              }}
+            >
+              <option value="">— Select venue —</option>
+              {venues.map(v => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+            {!srcVenueId && (
+              <p className="mt-2 text-[11px] text-[#7A4500]">
+                Select a venue before uploading — all tabs will be imported into this venue.
+              </p>
+            )}
+            {srcVenue && (
+              <p className="mt-2 text-[11px] text-[#15803d]">
+                All recipe tabs will be imported into <strong>{srcVenue.name}</strong>
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Drop zone */}
+        <div
+          onDragOver={e => { e.preventDefault(); if (canUpload) setDragging(true) }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
-          onClick={() => inputRef.current?.click()}
-          className="cursor-pointer rounded-card flex flex-col items-center justify-center gap-4 py-16 px-8 text-center transition-colors"
+          onClick={() => { if (canUpload) inputRef.current?.click() }}
+          className="rounded-card flex flex-col items-center justify-center gap-4 py-16 px-8 text-center transition-colors"
           style={{
             border: `2px dashed ${dragging ? '#C8973A' : 'rgba(26,23,20,0.18)'}`,
             background: dragging ? 'rgba(200,151,58,0.04)' : '#FFFFFF',
+            cursor: canUpload ? 'pointer' : 'not-allowed',
+            opacity: canUpload ? 1 : 0.45,
           }}
         >
           <div
@@ -204,16 +320,29 @@ export function ImportClient({ venues, sections }: Props) {
             </svg>
           </div>
           <div>
-            <p className="font-fraunces text-[17px] text-[#1A1714] mb-1">Drop your workbook here</p>
-            <p className="text-[#7A7470] text-[13px]">or click to browse — .xlsx or .xls files</p>
+            <p className="font-fraunces text-[17px] text-[#1A1714] mb-1">
+              {canUpload ? 'Drop your workbook here' : 'Select a venue first'}
+            </p>
+            <p className="text-[#7A7470] text-[13px]">
+              {canUpload ? 'or click to browse — .xlsx or .xls files' : 'then drop your .xlsx file here'}
+            </p>
           </div>
-          <div
-            className="text-[11px] text-[#7A7470] px-3 py-1.5 rounded-lg"
-            style={{ background: 'rgba(26,23,20,0.04)', border: '1px solid rgba(26,23,20,0.08)' }}
-          >
-            Each worksheet tab = one recipe
-          </div>
-          <input ref={inputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={onFileChange} />
+          {canUpload && (
+            <div
+              className="text-[11px] text-[#7A7470] px-3 py-1.5 rounded-lg"
+              style={{ background: 'rgba(26,23,20,0.04)', border: '1px solid rgba(26,23,20,0.08)' }}
+            >
+              Each worksheet tab = one recipe
+            </div>
+          )}
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={onFileChange}
+            disabled={!canUpload}
+          />
         </div>
 
         {parseError && (
@@ -230,21 +359,11 @@ export function ImportClient({ venues, sections }: Props) {
           className="mt-6 rounded-card p-5"
           style={{ border: '1px solid rgba(26,23,20,0.09)', background: '#FFFFFF' }}
         >
-          <h3 className="font-fraunces text-[15px] text-[#1A1714] mb-3">Expected cell layout</h3>
+          <h3 className="font-fraunces text-[15px] text-[#1A1714] mb-3">
+            Expected cell layout — {FORMAT_LABELS[format]}
+          </h3>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[12px]">
-            {[
-              ['B1', 'Outlet / venue name'],
-              ['B3', 'Recipe title'],
-              ['B5', 'Portion size'],
-              ['B6', 'Recipe size'],
-              ['A10:A35', 'Ingredient quantities'],
-              ['B10:B35', 'Units'],
-              ['C10:C35', 'Ingredient name, prep note'],
-              ['A51:A63', 'Method steps'],
-              ['E45', 'Selling price'],
-              ['F38', 'Total cost'],
-              ['F39', 'Cost per portion'],
-            ].map(([cell, desc]) => (
+            {(isSRC ? srcCells : venueSheetCells).map(([cell, desc]) => (
               <div key={cell} className="flex items-baseline gap-2">
                 <code
                   className="shrink-0 font-mono text-[11px] px-1.5 py-0.5 rounded"
@@ -261,7 +380,7 @@ export function ImportClient({ venues, sections }: Props) {
     )
   }
 
-  // ── Publishing stage ──────────────────────────────────────────────────────
+  // ── Publishing stage ───────────────────────────────────────────────────────
   if (stage === 'publishing') {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -274,7 +393,7 @@ export function ImportClient({ venues, sections }: Props) {
     )
   }
 
-  // ── Done stage ────────────────────────────────────────────────────────────
+  // ── Done stage ─────────────────────────────────────────────────────────────
   if (stage === 'done') {
     const succeeded = results.filter(r => r.success)
     const failed = results.filter(r => !r.success)
@@ -353,8 +472,9 @@ export function ImportClient({ venues, sections }: Props) {
     )
   }
 
-  // ── Review stage ──────────────────────────────────────────────────────────
+  // ── Review stage ───────────────────────────────────────────────────────────
   const selectableCount = parsed.filter(r => r.status !== 'error').length
+  const isSRCReview = format === 'standard-recipe-card'
 
   return (
     <div className="max-w-[1100px]">
@@ -369,6 +489,12 @@ export function ImportClient({ venues, sections }: Props) {
             <path d="M9.5 1.5v4H13.5" stroke="#9A9490" strokeWidth="1.2" strokeLinejoin="round" />
           </svg>
           <span className="text-[13px] text-[#1A1714] font-medium truncate">{fileName}</span>
+          <span
+            className="text-[11px] font-medium px-2 py-0.5 rounded shrink-0"
+            style={{ background: 'rgba(26,23,20,0.06)', color: '#4A4540' }}
+          >
+            {FORMAT_LABELS[format]}
+          </span>
           <span className="text-[12px] text-[#7A7470] shrink-0">
             {parsed.length} {parsed.length === 1 ? 'recipe tab' : 'recipe tabs'} found
           </span>
@@ -433,167 +559,172 @@ export function ImportClient({ venues, sections }: Props) {
 
       {/* Review table */}
       <div className="overflow-x-auto rounded-card" style={{ border: '1px solid rgba(26,23,20,0.09)' }}>
-      <div
-        className="overflow-hidden"
-        style={{ minWidth: 860, background: '#FFFFFF' }}
-      >
-        {/* Header */}
         <div
-          className="grid text-[11px] font-semibold tracking-[0.08em] uppercase text-[#7A7470] px-5 py-2.5 gap-3"
-          style={{
-            background: 'rgba(26,23,20,0.03)',
-            borderBottom: '1px solid rgba(26,23,20,0.07)',
-            gridTemplateColumns: '28px 140px 1fr 160px 200px 100px 80px',
-          }}
+          className="overflow-hidden"
+          style={{ minWidth: 860, background: '#FFFFFF' }}
         >
-          <span />
-          <span>Tab</span>
-          <span>Recipe</span>
-          <span>Venue</span>
-          <span>Section</span>
-          <span>Notes</span>
-          <span>Status</span>
-        </div>
+          {/* Header */}
+          <div
+            className="grid text-[11px] font-semibold tracking-[0.08em] uppercase text-[#7A7470] px-5 py-2.5 gap-3"
+            style={{
+              background: 'rgba(26,23,20,0.03)',
+              borderBottom: '1px solid rgba(26,23,20,0.07)',
+              gridTemplateColumns: '28px 140px 1fr 160px 200px 100px 80px',
+            }}
+          >
+            <span />
+            <span>Tab</span>
+            <span>Recipe</span>
+            <span>Venue</span>
+            <span>Section</span>
+            <span>Notes</span>
+            <span>Status</span>
+          </div>
 
-        {/* Rows */}
-        <div className="divide-y" style={{ borderColor: 'rgba(26,23,20,0.06)' }}>
-          {parsed.map(recipe => {
-            const sc = STATUS_CONFIG[recipe.status]
-            const isError = recipe.status === 'error'
-            const isChecked = selected.has(recipe.tab_name)
-            const matchedVenue = venues.find(v => v.id === recipe.matched_venue_id)
-            const venueSections = sectionsFor(recipe.matched_venue_id)
-            const currentSection = sectionMap[recipe.tab_name] ?? null
+          {/* Rows */}
+          <div className="divide-y" style={{ borderColor: 'rgba(26,23,20,0.06)' }}>
+            {parsed.map(recipe => {
+              const sc = STATUS_CONFIG[recipe.status]
+              const isError = recipe.status === 'error'
+              const isChecked = selected.has(recipe.tab_name)
+              const matchedVenue = venues.find(v => v.id === recipe.matched_venue_id)
+              const venueSections = sectionsFor(recipe.matched_venue_id)
+              const currentSection = sectionMap[recipe.tab_name] ?? null
 
-            return (
-              <div
-                key={recipe.tab_name}
-                className="grid items-center px-5 py-3 gap-3 transition-colors"
-                style={{
-                  gridTemplateColumns: '28px 140px 1fr 160px 200px 100px 80px',
-                  background: isChecked ? 'rgba(200,151,58,0.08)' : '#FFFFFF',
-                }}
-              >
-                {/* Checkbox */}
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  disabled={isError}
-                  onChange={() => toggleSelect(recipe.tab_name)}
-                  className="w-4 h-4 cursor-pointer accent-[#1A1714] disabled:opacity-30"
-                />
+              return (
+                <div
+                  key={recipe.tab_name}
+                  className="grid items-center px-5 py-3 gap-3 transition-colors"
+                  style={{
+                    gridTemplateColumns: '28px 140px 1fr 160px 200px 100px 80px',
+                    background: isChecked ? 'rgba(200,151,58,0.08)' : '#FFFFFF',
+                  }}
+                >
+                  {/* Checkbox */}
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    disabled={isError}
+                    onChange={() => toggleSelect(recipe.tab_name)}
+                    className="w-4 h-4 cursor-pointer accent-[#1A1714] disabled:opacity-30"
+                  />
 
-                {/* Tab name */}
-                <div className="text-[12px] text-[#7A7470] font-mono truncate" title={recipe.tab_name}>
-                  {recipe.tab_name}
-                </div>
+                  {/* Tab name */}
+                  <div className="text-[12px] text-[#7A7470] font-mono truncate" title={recipe.tab_name}>
+                    {recipe.tab_name}
+                  </div>
 
-                {/* Recipe title */}
-                <div className="text-[13px] text-[#1A1714] font-medium truncate">
-                  {recipe.title ?? <span className="text-[#dc2626] font-normal">Missing</span>}
-                </div>
-
-                {/* Venue */}
-                <div className="text-[12px] truncate">
-                  {matchedVenue
-                    ? <span className="text-[#4A4540]">{matchedVenue.name}</span>
-                    : recipe.venue_name
-                      ? <span className="text-[#dc2626]">{recipe.venue_name} (no match)</span>
-                      : <span className="text-[#dc2626]">Missing</span>
-                  }
-                </div>
-
-                {/* Section dropdown */}
-                <div>
-                  {recipe.matched_venue_id && venueSections.length > 0 ? (
-                    <select
-                      value={currentSection ?? ''}
-                      onChange={e => setSection(recipe.tab_name, e.target.value || null)}
-                      className="w-full text-[12px] rounded px-2 py-1 transition-colors"
-                      style={{
-                        border: '1px solid rgba(26,23,20,0.15)',
-                        background: '#FFFFFF',
-                        color: currentSection ? '#1A1714' : '#9A9490',
-                        outline: 'none',
-                      }}
-                    >
-                      <option value="">— No section —</option>
-                      {venueSections.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="text-[12px] text-[#7A7470]">—</span>
-                  )}
-                </div>
-
-                {/* Notes */}
-                <div className="space-y-0.5">
-                  {recipe.errors.map((e, i) => (
-                    <p key={i} className="text-[11px] text-[#dc2626] leading-snug">{e}</p>
-                  ))}
-                  {recipe.warnings.map((w, i) => (
-                    <p key={i} className="text-[11px] leading-snug" style={{ color: '#7A4500' }}>{w}</p>
-                  ))}
-                  <p className="text-[11px] text-[#7A7470]">
-                    {recipe.ingredients.filter(i => i.name).length} ingredients
-                    {recipe.steps.length > 0 ? ` · ${recipe.steps.length} steps` : ''}
-                    {recipe.cost_per_portion ? ` · ${recipe.cost_per_portion.toFixed(3)}/portion` : ''}
-                  </p>
-                  {duplicates[recipe.tab_name] && (
-                    <div className="mt-1 pt-1" style={{ borderTop: '1px solid rgba(155,90,0,0.15)' }}>
-                      <p className="text-[11px] leading-snug" style={{ color: '#7A4500' }}>
-                        Matches: &ldquo;{duplicates[recipe.tab_name].existing_title}&rdquo;
-                      </p>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {isChecked ? (
-                          <button
-                            onClick={() => toggleSelect(recipe.tab_name)}
-                            className="text-[10px] font-semibold px-2 py-0.5 rounded transition-opacity hover:opacity-70"
-                            style={{ background: 'rgba(26,23,20,0.07)', color: '#4A4540' }}
-                          >
-                            ✗ Skip instead
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => toggleSelect(recipe.tab_name)}
-                            className="text-[10px] font-semibold px-2 py-0.5 rounded transition-opacity hover:opacity-70"
-                            style={{ background: 'rgba(155,90,0,0.12)', color: '#7A4500' }}
-                          >
-                            ↺ Replace existing
-                          </button>
-                        )}
-                      </div>
+                  {/* Recipe title */}
+                  <div>
+                    <div className="text-[13px] text-[#1A1714] font-medium truncate">
+                      {recipe.title ?? <span className="text-[#dc2626] font-normal">Missing</span>}
                     </div>
-                  )}
-                </div>
+                    {isSRCReview && recipe.description && (
+                      <div className="text-[11px] text-[#7A7470] truncate mt-0.5">{recipe.description}</div>
+                    )}
+                  </div>
 
-                {/* Status */}
-                <div className="flex flex-col items-start gap-1">
-                  <span
-                    className="text-[11px] font-semibold px-2 py-0.5 rounded whitespace-nowrap"
-                    style={{ background: sc.bg, color: sc.text }}
-                  >
-                    {sc.label}
-                  </span>
-                  {duplicates[recipe.tab_name] && (
+                  {/* Venue */}
+                  <div className="text-[12px] truncate">
+                    {matchedVenue
+                      ? <span className="text-[#4A4540]">{matchedVenue.name}</span>
+                      : recipe.venue_name
+                        ? <span className="text-[#dc2626]">{recipe.venue_name} (no match)</span>
+                        : <span className="text-[#dc2626]">Missing</span>
+                    }
+                  </div>
+
+                  {/* Section dropdown */}
+                  <div>
+                    {recipe.matched_venue_id && venueSections.length > 0 ? (
+                      <select
+                        value={currentSection ?? ''}
+                        onChange={e => setSection(recipe.tab_name, e.target.value || null)}
+                        className="w-full text-[12px] rounded px-2 py-1 transition-colors"
+                        style={{
+                          border: '1px solid rgba(26,23,20,0.15)',
+                          background: '#FFFFFF',
+                          color: currentSection ? '#1A1714' : '#9A9490',
+                          outline: 'none',
+                        }}
+                      >
+                        <option value="">— No section —</option>
+                        {venueSections.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-[12px] text-[#7A7470]">—</span>
+                    )}
+                  </div>
+
+                  {/* Notes */}
+                  <div className="space-y-0.5">
+                    {recipe.errors.map((e, i) => (
+                      <p key={i} className="text-[11px] text-[#dc2626] leading-snug">{e}</p>
+                    ))}
+                    {recipe.warnings.map((w, i) => (
+                      <p key={i} className="text-[11px] leading-snug" style={{ color: '#7A4500' }}>{w}</p>
+                    ))}
+                    <p className="text-[11px] text-[#7A7470]">
+                      {recipe.ingredients.filter(i => i.name).length} ingredients
+                      {recipe.steps.length > 0 ? ` · ${recipe.steps.length} steps` : ''}
+                      {recipe.cost_per_portion ? ` · ${recipe.cost_per_portion.toFixed(3)}/portion` : ''}
+                    </p>
+                    {duplicates[recipe.tab_name] && (
+                      <div className="mt-1 pt-1" style={{ borderTop: '1px solid rgba(155,90,0,0.15)' }}>
+                        <p className="text-[11px] leading-snug" style={{ color: '#7A4500' }}>
+                          Matches: &ldquo;{duplicates[recipe.tab_name].existing_title}&rdquo;
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          {isChecked ? (
+                            <button
+                              onClick={() => toggleSelect(recipe.tab_name)}
+                              className="text-[10px] font-semibold px-2 py-0.5 rounded transition-opacity hover:opacity-70"
+                              style={{ background: 'rgba(26,23,20,0.07)', color: '#4A4540' }}
+                            >
+                              ✗ Skip instead
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => toggleSelect(recipe.tab_name)}
+                              className="text-[10px] font-semibold px-2 py-0.5 rounded transition-opacity hover:opacity-70"
+                              style={{ background: 'rgba(155,90,0,0.12)', color: '#7A4500' }}
+                            >
+                              ↺ Replace existing
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex flex-col items-start gap-1">
                     <span
                       className="text-[11px] font-semibold px-2 py-0.5 rounded whitespace-nowrap"
-                      style={
-                        isChecked
-                          ? { background: 'rgba(200,151,58,0.15)', color: '#7A5A00' }
-                          : { background: 'rgba(155,90,0,0.10)', color: '#7A4500' }
-                      }
+                      style={{ background: sc.bg, color: sc.text }}
                     >
-                      {isChecked ? '↺ Replace' : '⚠ Exists'}
+                      {sc.label}
                     </span>
-                  )}
+                    {duplicates[recipe.tab_name] && (
+                      <span
+                        className="text-[11px] font-semibold px-2 py-0.5 rounded whitespace-nowrap"
+                        style={
+                          isChecked
+                            ? { background: 'rgba(200,151,58,0.15)', color: '#7A5A00' }
+                            : { background: 'rgba(155,90,0,0.10)', color: '#7A4500' }
+                        }
+                      >
+                        {isChecked ? '↺ Replace' : '⚠ Exists'}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
-      </div>
       </div>
 
       {/* Sticky publish footer */}

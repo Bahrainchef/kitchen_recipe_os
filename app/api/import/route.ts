@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
           .update({
             section_id: r.section_id,
             title: r.title,
+            description: r.description ?? null,
             portion_size: r.portion_size,
             recipe_size: r.recipe_size ?? 1,
             selling_price: r.selling_price,
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest) {
             venue_id: r.venue_id,
             section_id: r.section_id,
             title: r.title,
+            description: r.description ?? null,
             portion_size: r.portion_size,
             recipe_size: r.recipe_size ?? 1,
             selling_price: r.selling_price,
