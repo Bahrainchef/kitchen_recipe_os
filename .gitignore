@@ -26,3 +26,5 @@ tsconfig.tsbuildinfo
 *.webp
 !/public/**
 !/Logos/**
+"Favicon Kitchen Recipe OS.png"
+Favicon_Kitchen_Recipe_OS.png

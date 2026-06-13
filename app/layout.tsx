@@ -17,10 +17,19 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'Kitchen Recipe OS',
-  description: 'F&B recipe management across Bahrain and Saudi Arabia',
+  title: 'Kitchen Recipe OS | BahrainChef',
+  description: 'Multi-venue recipe management for Bahrain and Saudi Arabia F&B group',
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    other: [
+      { rel: 'icon', url: '/icon512.png', sizes: '512x512', type: 'image/png' },
+    ],
   },
 }
 
