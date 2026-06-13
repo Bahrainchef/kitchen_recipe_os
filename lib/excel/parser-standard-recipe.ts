@@ -1,5 +1,9 @@
 import type { ParsedIngredient, ParsedRecipe } from './parser'
 
+// SheetJS cell shape
+type XLSXCell = { v?: unknown; w?: string; t?: string } | undefined
+type XLSXSheet = Record<string, XLSXCell>
+
 // D12 venue hashtag → venue id + display name
 const VENUE_TAG_MAP: Record<string, { id: string; name: string }> = {
   '#oneteamonedream': {
@@ -8,24 +12,53 @@ const VENUE_TAG_MAP: Record<string, { id: string; name: string }> = {
   },
 }
 
-// Read a cell from a 2D row array (0-indexed row and col).
-function getStr(rows: unknown[][], row: number, col: number): string {
-  const r = rows[row]
-  if (!r) return ''
-  const v = (r as unknown[])[col]
-  if (v == null) return ''
-  return String(v).trim()
+function cellVal(sheet: XLSXSheet, addr: string): string {
+  const cell = sheet[addr]
+  if (!cell || cell.v == null) return ''
+  return String(cell.v).trim()
 }
 
-function getNum(rows: unknown[][], row: number, col: number): number | null {
-  const s = getStr(rows, row, col)
+function cellNumAt(sheet: XLSXSheet, addr: string): number | null {
+  const s = cellVal(sheet, addr)
   if (!s) return null
   const n = parseFloat(s)
   return isNaN(n) ? null : n
 }
 
+// Scan every cell in the sheet for a value that starts with "#".
+// Merged cells store their value at the merge anchor (often not D12 in A1 space)
+// so scanning all cells is the only reliable approach.
+function findHashtagInSheet(sheet: XLSXSheet): string {
+  for (const addr of Object.keys(sheet)) {
+    if (addr.startsWith('!')) continue
+    const v = cellVal(sheet, addr)
+    if (v.startsWith('#')) return v
+  }
+  return ''
+}
+
+// Scan a specific Excel row for the first non-empty cell value.
+// row is 1-based (row 3 = "3" in A1 notation).
+function scanRow(sheet: XLSXSheet, row: number, fromCol = 1, toCol = 10): string {
+  for (let c = fromCol; c <= toCol; c++) {
+    const col = String.fromCharCode(64 + c)   // 1→A, 2→B … 10→J
+    const v = cellVal(sheet, `${col}${row}`)
+    if (v) return v
+  }
+  return ''
+}
+
+function scanRowNum(sheet: XLSXSheet, row: number, fromCol = 1, toCol = 10): number | null {
+  for (let c = fromCol; c <= toCol; c++) {
+    const col = String.fromCharCode(64 + c)
+    const n = cellNumAt(sheet, `${col}${row}`)
+    if (n !== null) return n
+  }
+  return null
+}
+
 // Weights are stored as kg decimals (0.25 = 250 gr).
-// gr/ml: ×1000 and round. each/unit: round only.
+// gr/ml: ×1000 and round.  each/unit: round only.
 function convertQuantity(raw: number, unit: string | null): number {
   const u = (unit ?? '').toLowerCase().trim()
   if (u === 'gr' || u === 'g' || u === 'ml') return Math.round(raw * 1000)
@@ -33,7 +66,6 @@ function convertQuantity(raw: number, unit: string | null): number {
   return raw
 }
 
-// Convert ALL CAPS source data to Title Case.
 // "SCHUG — ZAHAV" → "Schug — Zahav"
 function toTitleCase(s: string): string {
   return s
@@ -42,35 +74,34 @@ function toTitleCase(s: string): string {
     .join(' ')
 }
 
-// Standard Recipe Card — cell map (1-based Excel → 0-based array index):
-//   D3  = rows[2][3]  — Recipe name
-//   D4  = rows[3][3]  — Subtitle / description
-//   D5  = rows[4][3]  — Recipe size (yield/batch)
-//   D6  = rows[5][3]  — Number of portions (default 1 if empty)
-//   D12 = rows[11][3] — Venue hashtag, e.g. "#OneTeamOneDream"
-//   B15:B39 = rows[14..38][1] — Ingredient weight as kg decimal
-//   C15:C39 = rows[14..38][2] — Unit (gr, ml, each …)
-//   D15:D39 = rows[14..38][3] — Ingredient name
-//   E15:E39 = rows[14..38][4] — Preparation note (optional)
-//   G40 = rows[39][6]         — Total recipe cost (optional)
-//   B42+ = rows[41+][1]       — Method steps, stop at first empty row
-//
-// Receives a 2D row array from xlsx.utils.sheet_to_json(sheet, { header:1, defval:'' })
-// so merged cells are resolved correctly regardless of their A1 address.
+// Standard Recipe Card format:
+//   Row 3  (D/E…) = Recipe name
+//   Row 4  (D/E…) = Subtitle / description
+//   Row 5  (D/E…) = Recipe size (yield/batch)
+//   Row 6  (D/E…) = Number of portions (default 1 if empty)
+//   Row 12 (any)  = Venue hashtag "#OneTeamOneDream"  ← scanned across all cells
+//   Rows 15–39, col B = ingredient weight (kg decimal → ×1000)
+//   Rows 15–39, col C = unit
+//   Rows 15–39, col D = ingredient name
+//   Rows 15–39, col E = prep note
+//   Row 40, col G     = total recipe cost
+//   Row 42+, col B    = method steps (stop at first empty)
 export function parseStandardRecipeSheet(
-  rows: unknown[][],
+  sheet: XLSXSheet,
   tabName: string,
 ): ParsedRecipe {
-  // ── Venue: D12 = rows[11][3] ─────────────────────────────────────────────
-  const venueTagRaw      = getStr(rows, 11, 3)
+  // ── Venue: scan all cells for hashtag (handles merged-cell anchoring) ─────
+  const venueTagRaw      = findHashtagInSheet(sheet)
   const venueTag         = venueTagRaw.toLowerCase()
   const venueMatch       = VENUE_TAG_MAP[venueTag] ?? null
   const matched_venue_id = venueMatch?.id   ?? null
   const venue_name       = venueMatch?.name ?? (venueTagRaw || null)
 
-  // ── Recipe metadata ───────────────────────────────────────────────────────
-  const nameRaw     = getStr(rows, 2, 3)   // D3
-  const subtitleRaw = getStr(rows, 3, 3)   // D4
+  // ── Recipe metadata: scan each row in case cells are merged ──────────────
+  const nameRaw     = scanRow(sheet, 3,  4, 8)   // row 3,  cols D–H
+  const subtitleRaw = scanRow(sheet, 4,  4, 8)   // row 4,  cols D–H
+  const recipe_size  = scanRowNum(sheet, 5, 4, 8) // row 5,  cols D–H
+  const portion_size = scanRowNum(sheet, 6, 4, 8) ?? 1  // row 6, default 1
 
   const combinedRaw = nameRaw && subtitleRaw
     ? `${nameRaw} — ${subtitleRaw}`
@@ -78,23 +109,22 @@ export function parseStandardRecipeSheet(
   const title       = combinedRaw ? toTitleCase(combinedRaw) : null
   const description = subtitleRaw ? toTitleCase(subtitleRaw) : null
 
-  const recipe_size  = getNum(rows, 4, 3)        // D5
-  const portion_size = getNum(rows, 5, 3) ?? 1   // D6, default 1
-  const total_cost   = getNum(rows, 39, 6)        // G40
+  // Row 40, col G = total cost
+  const total_cost = cellNumAt(sheet, 'G40')
 
-  // ── Ingredients: rows 15–39 = array indices 14–38 ───────────────────────
+  // ── Ingredients: rows 15–39 ──────────────────────────────────────────────
   const ingredients: ParsedIngredient[] = []
 
-  for (let i = 14; i <= 38; i++) {
-    const name = getStr(rows, i, 3)                   // col D
+  for (let row = 15; row <= 39; row++) {
+    const name = cellVal(sheet, `D${row}`)
     if (!name) continue
 
-    const weightRaw = getNum(rows, i, 1)              // col B
+    const weightRaw = cellNumAt(sheet, `B${row}`)
     if (weightRaw === null || weightRaw === 0) continue
 
-    const unitRaw  = getStr(rows, i, 2)               // col C
+    const unitRaw  = cellVal(sheet, `C${row}`)
     const unit     = unitRaw ? unitRaw.toLowerCase() : null
-    const prepNote = getStr(rows, i, 4) || null       // col E
+    const prepNote = cellVal(sheet, `E${row}`) || null
 
     ingredients.push({
       quantity:   convertQuantity(weightRaw, unit),
@@ -102,14 +132,14 @@ export function parseStandardRecipeSheet(
       name,
       prep_note:  prepNote,
       group_name: null,
-      row:        i + 1,                              // 1-based for error messages
+      row,
     })
   }
 
-  // ── Method steps: B42+ = array index 41+, stop at first empty ───────────
+  // ── Method steps: row 42+, col B, stop at first empty ───────────────────
   const steps: string[] = []
-  for (let i = 41; i < rows.length; i++) {
-    const text = getStr(rows, i, 1)                   // col B
+  for (let row = 42; row <= 100; row++) {
+    const text = cellVal(sheet, `B${row}`)
     if (!text) break
     steps.push(text)
   }
@@ -118,11 +148,11 @@ export function parseStandardRecipeSheet(
   const errors: string[] = []
   const warnings: string[] = []
 
-  if (!title)            errors.push('Recipe name missing (D3)')
-  if (!matched_venue_id) errors.push(`Unknown venue tag in D12: "${venueTagRaw || 'empty'}"`)
+  if (!title)            errors.push('Recipe name missing (row 3)')
+  if (!matched_venue_id) errors.push(`Unknown venue tag: "${venueTagRaw || 'not found in sheet'}"`)
 
-  if (ingredients.length === 0) warnings.push('No ingredients found (rows 15–39)')
-  if (steps.length === 0)       warnings.push('No method steps found (row 42+)')
+  if (ingredients.length === 0) warnings.push('No ingredients found (rows 15–39, col D)')
+  if (steps.length === 0)       warnings.push('No method steps found (row 42+, col B)')
 
   const status: ParsedRecipe['status'] =
     errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'ok'
