@@ -28,10 +28,9 @@ const FORMAT_LABELS: Record<ImportFormat, string> = {
 
 interface Props {
   venues: Venue[]
-  sections: Section[]
 }
 
-export function ImportClient({ venues, sections }: Props) {
+export function ImportClient({ venues }: Props) {
   const [stage, setStage] = useState<Stage>('upload')
   const [format, setFormat] = useState<ImportFormat>('venue-cost-sheet')
   const [dragging, setDragging] = useState(false)
@@ -46,6 +45,8 @@ export function ImportClient({ venues, sections }: Props) {
   const [duplicates, setDuplicates] = useState<Record<string, DuplicateMatch>>({})
   const [dupLoading, setDupLoading] = useState(false)
   const [publishProgress, setPublishProgress] = useState<{ done: number; total: number } | null>(null)
+  const [venueSections, setVenueSections] = useState<Record<string, Section[]>>({})
+  const [sectionsLoading, setSectionsLoading] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
@@ -56,13 +57,14 @@ export function ImportClient({ venues, sections }: Props) {
   }, [])
 
   const sectionsFor = (venueId: string | null) =>
-    venueId ? sections.filter(s => s.venue_id === venueId && s.is_active) : []
+    venueId ? (venueSections[venueId] ?? []) : []
 
   const isExcelFile = (f: File) => f.name.endsWith('.xlsx') || f.name.endsWith('.xls')
 
   // ── Core parser ────────────────────────────────────────────────────────────
   const parseFiles = useCallback(async (files: File[]) => {
     setParseError(null)
+    setVenueSections({})
     try {
       const xlsx = await import('xlsx')
       const allRecipes: ParsedRecipeWithSource[] = []
@@ -139,10 +141,26 @@ export function ImportClient({ venues, sections }: Props) {
       setParsed(allRecipes)
       setSelected(new Set(allRecipes.filter(r => r.status !== 'error').map(uid)))
 
+      // Fetch sections live from DB for every venue that appeared in parsed recipes
+      const uniqueVenueIds = [...new Set(
+        allRecipes.map(r => r.matched_venue_id).filter((v): v is string => Boolean(v))
+      )]
+
+      setSectionsLoading(true)
+      const fetchedSects: Record<string, Section[]> = {}
+      await Promise.all(uniqueVenueIds.map(async (vid) => {
+        try {
+          const res = await fetch(`/api/sections?venue_id=${encodeURIComponent(vid)}`)
+          if (res.ok) fetchedSects[vid] = await res.json()
+        } catch { /* leave empty — dropdown will show no options */ }
+      }))
+      setVenueSections(fetchedSects)
+      setSectionsLoading(false)
+
       const autoSections: Record<string, string | null> = {}
       for (const r of allRecipes) {
         if (r.matched_venue_id) {
-          const vs = sections.filter(s => s.venue_id === r.matched_venue_id && s.is_active)
+          const vs = fetchedSects[r.matched_venue_id] ?? []
           autoSections[uid(r)] = vs.length === 1 ? vs[0].id : null
         } else {
           autoSections[uid(r)] = null
@@ -179,7 +197,7 @@ export function ImportClient({ venues, sections }: Props) {
     } catch (e) {
       setParseError(`Failed to parse: ${String(e)}`)
     }
-  }, [venues, sections, format])
+  }, [venues, format])
 
   // Drop zone: accepts multiple individual .xlsx files dragged together.
   // Folder drag-and-drop is blocked by browsers — use the folder picker button instead.
@@ -291,6 +309,8 @@ export function ImportClient({ venues, sections }: Props) {
     setDuplicates({})
     setDupLoading(false)
     setPublishProgress(null)
+    setVenueSections({})
+    setSectionsLoading(false)
     if (fileInputRef.current)   fileInputRef.current.value = ''
     if (folderInputRef.current) folderInputRef.current.value = ''
   }
@@ -553,6 +573,7 @@ export function ImportClient({ venues, sections }: Props) {
           {skippedCount > 0 && (
             <span className="text-[12px] text-[#9A9490]">{skippedCount} tabs skipped</span>
           )}
+          {sectionsLoading && <span className="text-[11px] text-[#4A7AC8] animate-pulse">Loading sections…</span>}
           {dupLoading && <span className="text-[11px] text-[#7A4500] animate-pulse">Checking duplicates…</span>}
           {!dupLoading && Object.keys(duplicates).length > 0 && (
             <span className="text-[11px] font-medium px-2 py-0.5 rounded" style={{ background: 'rgba(155,90,0,0.10)', color: '#7A4500' }}>

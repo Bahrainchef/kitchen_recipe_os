@@ -1,9 +1,9 @@
-import { getAllVenues, getAllSections } from '@/lib/supabase/queries'
+import { getAllVenues } from '@/lib/supabase/queries'
 import { ImportClient } from '@/components/ImportClient'
 import { ActionBar } from '@/components/ActionBar'
 
 export default async function ImportPage() {
-  const [venues, sections] = await Promise.all([getAllVenues(), getAllSections()])
+  const venues = await getAllVenues()
 
   return (
     <div className="min-h-screen bg-[#F8F4EE]">
@@ -24,7 +24,7 @@ export default async function ImportPage() {
           </p>
         </div>
 
-        <ImportClient venues={venues} sections={sections} />
+        <ImportClient venues={venues} />
       </main>
     </div>
   )
