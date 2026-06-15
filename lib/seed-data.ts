@@ -14,7 +14,7 @@ export const SEED_VENUES: Venue[] = [
     city: null,
     logo_url: null,
     cover_image_url: null,
-    theme_color: '#8B2635',
+    theme_color: '#C8973A',
     vat_rate: 0,
     is_active: true,
     sort_order: -1,

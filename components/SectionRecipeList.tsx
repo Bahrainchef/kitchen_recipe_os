@@ -17,7 +17,7 @@ function costBadgeStyle(pct: number | null): { bg: string; text: string; label: 
   const p = pct * 100
   if (pct < 0.25)  return { bg: 'rgba(22,163,74,0.12)',       text: '#4ade80', label: `${p.toFixed(1)}%` }
   if (pct <= 0.35) return { bg: 'rgba(167,139,250,0.14)',     text: '#a78bfa', label: `${p.toFixed(1)}%` }
-  return              { bg: 'rgba(220,38,38,0.12)',            text: '#f87171', label: `${p.toFixed(1)}%` }
+  return              { bg: 'rgba(200,151,58,0.14)',            text: '#F59E0B', label: `${p.toFixed(1)}%` }
 }
 
 const SECTION_ICONS: Record<string, string> = {
