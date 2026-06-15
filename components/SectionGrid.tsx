@@ -197,7 +197,7 @@ export function SectionGrid({ sections, recipeCounts, venueId, themeColor }: Pro
       </div>
 
       {saveError && (
-        <p className="text-[13px] mb-4" style={{ color: '#dc2626' }}>{saveError}</p>
+        <p className="text-[13px] mb-4" style={{ color: '#F59E0B' }}>{saveError}</p>
       )}
 
       {reorderMode ? (

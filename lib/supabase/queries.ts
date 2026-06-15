@@ -90,22 +90,23 @@ export async function getRecipeCountsForVenue(venueId: string): Promise<{ total:
   if (!isSupabaseReady()) return empty
   try {
     const supabase = db()
-    // Fetch only section_id (tiny payload). range(0,9999) overrides PostgREST's
-    // default 1000-row cap so large venues like Pastry Hub never get truncated.
+    // Use a PostgREST aggregate query (GROUP BY at DB level) so row limits never
+    // truncate the result regardless of how large a venue's recipe list grows.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('recipes')
-      .select('section_id')
+      .select('section_id, count()')
       .eq('venue_id', venueId)
-      .range(0, 9999)
+      .not('section_id', 'is', null)
     if (error) { console.error('[queries] getRecipeCountsForVenue:', error.message); return empty }
     const bySectionId: Record<string, number> = {}
     let total = 0
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const r of (data ?? []) as any[]) {
-      if (r.section_id) {
-        bySectionId[r.section_id] = (bySectionId[r.section_id] ?? 0) + 1
-        total++
+      const n = parseInt(String(r.count), 10)
+      if (r.section_id && !isNaN(n)) {
+        bySectionId[r.section_id] = n
+        total += n
       }
     }
     return { total, bySectionId }

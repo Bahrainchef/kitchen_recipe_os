@@ -349,5 +349,5 @@ function costColor(pct: number | null): string {
   if (pct === null) return '#f0f4ff'
   if (pct < 0.25)  return '#15803d'
   if (pct <= 0.35) return '#6255CC'
-  return '#dc2626'
+  return '#F59E0B'
 }
