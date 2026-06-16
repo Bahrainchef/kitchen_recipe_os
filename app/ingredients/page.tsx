@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 import { getAllVenues, getIngredientMasterWithUsage, type IngredientWithUsage } from '@/lib/supabase/queries'
 import { IngredientsClient } from '@/components/IngredientsClient'

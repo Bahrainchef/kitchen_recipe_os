@@ -133,12 +133,16 @@ export interface Section {
 export interface IngredientMaster {
   id: string
   canonical_name: string
-  category: IngredientCategory
+  category: string | null
   default_unit: string | null
+  default_unit_size: number | null
   aliases: string[]
   is_reviewed: boolean
   merged_into: string | null
   notes: string | null
+  kcal_per_100g: number | null
+  pastry_notes: string | null
+  venue_id: string | null
   created_at: string
   updated_at: string
 }
