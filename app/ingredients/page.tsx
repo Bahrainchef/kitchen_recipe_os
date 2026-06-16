@@ -31,7 +31,7 @@ function detectDuplicates(ingredients: IngredientWithUsage[]) {
 }
 
 export default async function IngredientsPage() {
-  headers() // force dynamic — prevents any static caching by Next.js/Vercel
+  await headers() // force dynamic — prevents any static caching by Next.js/Vercel
   const [ingredients, venues] = await Promise.all([
     getIngredientMasterWithUsage(),
     getAllVenues(),
