@@ -158,7 +158,7 @@ export default async function VenuePage({ params }: Props) {
 
             {/* Meta chips */}
             <div className="flex flex-wrap gap-2 anim-fade-up" style={{ animationDelay: '60ms' }}>
-              <MetaChip accent style={{ background: `${venue.theme_color}18`, color: venue.theme_color, borderColor: `${venue.theme_color}30` }}>
+              <MetaChip accent style={{ background: `${venue.theme_color}18`, color: monogramTextColor(venue.theme_color) === '#FFFFFF' ? '#E2E8F0' : venue.theme_color, borderColor: `${venue.theme_color}30` }}>
                 {activeSections.length} section{activeSections.length !== 1 ? 's' : ''}
               </MetaChip>
               {recipeCounts.total > 0 && (
@@ -196,7 +196,7 @@ function MetaChip({
       className="inline-flex items-center text-[12px] px-2.5 py-1 rounded-lg font-medium"
       style={{
         background: accent ? undefined : 'rgba(126,184,247,0.08)',
-        color: accent ? undefined : 'rgba(240,244,255,0.60)',
+        color: accent ? undefined : '#FFFFFF',
         border: '1px solid',
         borderColor: accent ? undefined : 'rgba(126,184,247,0.12)',
         ...style,

@@ -29,6 +29,7 @@ const SECTION_ICONS: Record<string, string> = {
   'pastries & cakes':      '🥐',
   'pastries & croissants': '🥐',
   'pastry':                '🥐',
+  'pasta':                 '🍝',
   'sandwiches':            '🥪',
   'basic recipes':         '📋',
   'base recipes':          '📋',
