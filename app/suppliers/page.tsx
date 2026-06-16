@@ -12,7 +12,7 @@ export default async function SuppliersPage() {
   const ingredientMaster = ingredients.map(i => ({
     id: i.id,
     canonical_name: i.canonical_name,
-    category: i.category,
+    category: i.category ?? '',
     default_unit: i.default_unit,
   }))
 

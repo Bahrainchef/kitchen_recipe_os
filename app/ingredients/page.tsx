@@ -1,5 +1,4 @@
-export const dynamic = 'force-dynamic'
-
+import { headers } from 'next/headers'
 import { getAllVenues, getIngredientMasterWithUsage, type IngredientWithUsage } from '@/lib/supabase/queries'
 import { IngredientsClient } from '@/components/IngredientsClient'
 import { ActionBar } from '@/components/ActionBar'
@@ -32,6 +31,7 @@ function detectDuplicates(ingredients: IngredientWithUsage[]) {
 }
 
 export default async function IngredientsPage() {
+  headers() // force dynamic — prevents any static caching by Next.js/Vercel
   const [ingredients, venues] = await Promise.all([
     getIngredientMasterWithUsage(),
     getAllVenues(),

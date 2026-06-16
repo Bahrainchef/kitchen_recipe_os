@@ -136,7 +136,7 @@ function MergeModal({ pair, onClose, onMerged }: MergeModalProps) {
         <div className="grid grid-cols-2 gap-3 mb-5">
           {[pair.a, pair.b].map(ing => {
             const isKeep = keepId === ing.id
-            const catColor = CATEGORY_COLOR[ing.category]
+            const catColor = CATEGORY_COLOR[(ing.category ?? 'other') as IngredientCategory] ?? CATEGORY_COLOR['other']
             return (
               <label
                 key={ing.id}
@@ -176,7 +176,7 @@ function MergeModal({ pair, onClose, onMerged }: MergeModalProps) {
                     className="text-[11px] px-1.5 py-0.5 rounded font-medium"
                     style={{ background: catColor.bg, color: catColor.text }}
                   >
-                    {CATEGORY_LABEL[ing.category]}
+                    {CATEGORY_LABEL[(ing.category ?? 'other') as IngredientCategory] ?? ing.category ?? 'Other'}
                   </span>
                   {ing.default_unit && (
                     <span
@@ -282,7 +282,9 @@ export function IngredientsClient({ ingredients, duplicates, venues }: Props) {
   const categoryCounts = useMemo(() => {
     const counts: Partial<Record<IngredientCategory, number>> = {}
     for (const ing of ingredients) {
-      counts[ing.category] = (counts[ing.category] ?? 0) + 1
+      if (!ing.category) continue
+      const cat = ing.category as IngredientCategory
+      counts[cat] = (counts[cat] ?? 0) + 1
     }
     return counts
   }, [ingredients])
@@ -646,7 +648,7 @@ export function IngredientsClient({ ingredients, duplicates, venues }: Props) {
 
             {filtered.map(ing => {
               const isChecked = checkedIds.has(ing.id)
-              const catColor = CATEGORY_COLOR[ing.category]
+              const catColor = CATEGORY_COLOR[(ing.category ?? 'other') as IngredientCategory] ?? CATEGORY_COLOR['other']
               const isUnreviewed = !ing.is_reviewed
               const venuesForIng = ing.venue_ids
                 .map(vid => venueById[vid])
@@ -696,7 +698,7 @@ export function IngredientsClient({ ingredients, duplicates, venues }: Props) {
                       className="inline-block text-[11px] font-medium px-2 py-0.5 rounded"
                       style={{ background: catColor.bg, color: catColor.text }}
                     >
-                      {CATEGORY_LABEL[ing.category]}
+                      {CATEGORY_LABEL[(ing.category ?? 'other') as IngredientCategory] ?? ing.category ?? 'Other'}
                     </span>
                   </div>
 
