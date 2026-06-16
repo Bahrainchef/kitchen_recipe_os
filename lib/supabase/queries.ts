@@ -177,13 +177,25 @@ export async function getIngredientMasterWithUsage(): Promise<IngredientWithUsag
     const supabase = db()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sb = supabase as any
-    const [{ data: ingredients, error }, { data: riRows }, { data: recipeRows }] = await Promise.all([
-      sb.from('ingredient_master').select('*').is('merged_into', null).order('canonical_name'),
+    // Paginate ingredient_master — library will grow beyond 1000 rows
+    const allIngredients: any[] = []
+    for (let offset = 0; ; offset += 1000) {
+      const { data: page, error: pageErr } = await sb
+        .from('ingredient_master')
+        .select('*')
+        .is('merged_into', null)
+        .order('canonical_name')
+        .range(offset, offset + 999)
+      if (pageErr) { console.error('[queries] getIngredientMasterWithUsage:', pageErr.message); return [] }
+      if (!page || page.length === 0) break
+      allIngredients.push(...page)
+      if (page.length < 1000) break
+    }
+
+    const [{ data: riRows }, { data: recipeRows }] = await Promise.all([
       sb.from('recipe_ingredients').select('ingredient_master_id, recipe_id').not('ingredient_master_id', 'is', null),
       sb.from('recipes').select('id, venue_id').neq('status', 'archived'),
     ])
-    if (error) { console.error('[queries] getIngredientMasterWithUsage:', error.message); return [] }
-
     const venueByRecipe = new Map<string, string>()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const r of (recipeRows ?? []) as any[]) venueByRecipe.set(r.id, r.venue_id)
@@ -199,7 +211,7 @@ export async function getIngredientMasterWithUsage(): Promise<IngredientWithUsag
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (ingredients ?? [] as any[]).map((ing: any) => {
+    return (allIngredients ?? [] as any[]).map((ing: any) => {
       const u = usageMap.get(ing.id)
       return { ...ing, recipe_count: u?.recipes.size ?? 0, venue_ids: u ? [...u.venues] : [] } as IngredientWithUsage
     })

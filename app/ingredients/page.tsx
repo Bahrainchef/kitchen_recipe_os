@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getAllVenues, getIngredientMasterWithUsage, type IngredientWithUsage } from '@/lib/supabase/queries'
 import { IngredientsClient } from '@/components/IngredientsClient'
 import { ActionBar } from '@/components/ActionBar'
