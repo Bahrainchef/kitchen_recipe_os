@@ -119,25 +119,16 @@ export default async function VenuePage({ params }: Props) {
           <div className="relative flex items-center gap-4 tablet:gap-5 py-4">
 
             {/* Logo — pulled up to overlap hero */}
-            <div className="shrink-0" style={{ marginTop: -40 }}>
+            <div className="shrink-0">
               {venue.logo_url ? (
-                <div
-                  className="flex items-center justify-center overflow-hidden anim-fade-up"
-                  style={{
-                    width: 72, height: 72, borderRadius: 16,
-                    background: logoBg,
-                    border: logoIsLight ? '2px solid rgba(255,255,255,0.80)' : '2px solid rgba(255,255,255,0.14)',
-                    padding: logoIsLight ? 6 : 4,
-                    boxShadow: '0 6px 24px rgba(0,0,0,0.50)',
-                  }}
-                >
+                <div className="w-24 h-24 rounded-full overflow-hidden flex-shrink-0 -mt-10">
                   <Image
                     src={venue.logo_url}
                     alt={`${venue.name} logo`}
-                    width={72}
-                    height={72}
-                    className="w-full h-full object-contain"
+                    width={96}
+                    height={96}
                     priority
+                    className="w-full h-full object-cover"
                   />
                 </div>
               ) : (

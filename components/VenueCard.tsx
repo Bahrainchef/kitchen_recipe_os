@@ -75,26 +75,14 @@ function LogoBadge({ venue }: { venue: Venue }) {
   const isPastryHub = venue.venue_type === 'pastry_hub'
 
   if (venue.logo_url) {
-    const bgSpec = LOGO_BG[venue.id] ?? '#1A2F5E'
-    const bg = bgSpec === 'theme' ? venue.theme_color : bgSpec
-    const isLight = bg === '#FFFFFF'
     return (
-      <div
-        className="overflow-hidden flex items-center justify-center shrink-0"
-        style={{
-          width: SIZE, height: SIZE, borderRadius: RADIUS,
-          background: bg,
-          border: isLight ? '1.5px solid rgba(255,255,255,0.70)' : '1.5px solid rgba(255,255,255,0.20)',
-          padding: isLight ? 4 : 3,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.55)',
-        }}
-      >
+      <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
         <Image
           src={venue.logo_url}
           alt={`${venue.name} logo`}
-          width={SIZE}
-          height={SIZE}
-          className="w-full h-full object-contain"
+          width={64}
+          height={64}
+          className="w-full h-full object-cover"
         />
       </div>
     )
