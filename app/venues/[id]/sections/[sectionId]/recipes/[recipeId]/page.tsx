@@ -157,10 +157,10 @@ export default async function RecipePage({ params }: Props) {
                               }
                               return (
                                 <tr key={ing.id} className="border-b" style={{ borderColor: 'rgba(126,184,247,0.08)' }}>
-                                  <td className="py-2.5 pr-2 text-[14px] text-text-muted tabular-nums w-14 text-right align-top">
+                                  <td className="py-2.5 pr-2 text-[14px] tabular-nums w-14 text-right align-top" style={{ color: '#FFFFFF' }}>
                                     {ing.quantity != null ? formatQty(ing.quantity, ing.unit) : '—'}
                                   </td>
-                                  <td className="py-2.5 pr-4 text-[13px] text-text-muted w-8 align-top">
+                                  <td className="py-2.5 pr-4 text-[13px] w-8 align-top" style={{ color: '#FFFFFF' }}>
                                     {ing.quantity != null ? displayUnit(ing.unit) : ''}
                                   </td>
                                   <td className="py-2.5 text-[15px] text-text-primary align-top">
@@ -183,11 +183,16 @@ export default async function RecipePage({ params }: Props) {
               {/* Method — always shown */}
               <section>
                 <SectionHeading color={venue.theme_color}>Method</SectionHeading>
-                {steps.length > 0 ? (
+                {(() => {
+                  const filteredSteps = steps.filter(s => {
+                    const t = s.instruction.trim()
+                    return t !== '' && t.toUpperCase() !== 'METHOD'
+                  })
+                  return filteredSteps.length > 0 ? (
                   <ol className="space-y-4">
                     {(() => {
                       let stepNum = 0
-                      return steps.map(step => {
+                      return filteredSteps.map(step => {
                         const heading = bracketHeading(step.instruction)
                         if (heading) {
                           return (
@@ -215,7 +220,8 @@ export default async function RecipePage({ params }: Props) {
                   </ol>
                 ) : (
                   <p className="text-text-muted text-[14px]">No method added yet.</p>
-                )}
+                )
+                })()}
               </section>
 
             </div>
