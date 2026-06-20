@@ -121,7 +121,7 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
               preparation_note: r.preparation_note.trim() || null,
             })),
           steps: stepRows
-            .filter(r => r.instruction.trim())
+            .filter(r => r.instruction.trim() && r.instruction.trim().toUpperCase() !== 'METHOD')
             .map(r => ({ instruction: r.instruction.trim() })),
         }),
       })
