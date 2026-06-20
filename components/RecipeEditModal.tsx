@@ -122,7 +122,7 @@ export function RecipeEditModal({ recipeId, recipe, ingredients, steps, themeCol
             })),
           steps: stepRows
             .filter(r => r.instruction.trim() && r.instruction.trim().toUpperCase() !== 'METHOD')
-            .map(r => ({ instruction: r.instruction.trim() })),
+            .map(r => ({ instruction: r.instruction.trim().replace(/^\s*[0-9]+[\.\)]\s*/, '') })),
         }),
       })
       const json = await res.json()

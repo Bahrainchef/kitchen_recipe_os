@@ -105,8 +105,10 @@ export async function POST(request: NextRequest) {
         if (iErr) throw new Error(`Ingredients: ${iErr.message}`)
       }
 
-      // 3. Insert method steps (skip blank lines)
-      const validSteps = r.steps.filter(s => s.trim() && s.trim().toUpperCase() !== 'METHOD')
+      // 3. Insert method steps (skip blank lines and bare METHOD headers; strip leading numbers)
+      const validSteps = r.steps
+        .filter(s => s.trim() && s.trim().toUpperCase() !== 'METHOD')
+        .map(s => s.trim().replace(/^\s*[0-9]+[\.\)]\s*/, ''))
       if (validSteps.length > 0) {
         const { error: sErr } = await supabase.from('recipe_steps').insert(
           validSteps.map((instruction, idx) => ({
