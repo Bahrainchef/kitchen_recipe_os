@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 3. Insert method steps (skip blank lines)
-      const validSteps = r.steps.filter(s => s.trim())
+      const validSteps = r.steps.filter(s => s.trim() && s.trim().toUpperCase() !== 'METHOD')
       if (validSteps.length > 0) {
         const { error: sErr } = await supabase.from('recipe_steps').insert(
           validSteps.map((instruction, idx) => ({
