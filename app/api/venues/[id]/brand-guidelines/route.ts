@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-const MAX_BYTES = 20 * 1024 * 1024
+const MAX_BYTES = 50 * 1024 * 1024
 const BUCKET = 'brand-guidelines'
 
 export async function POST(

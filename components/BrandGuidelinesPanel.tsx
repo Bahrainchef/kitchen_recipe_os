@@ -23,8 +23,8 @@ export function BrandGuidelinesPanel({ venueId, initialUrl, themeColor }: Props)
       setTimeout(() => setError(null), 4000)
       return
     }
-    if (file.size > 20 * 1024 * 1024) {
-      setError('File too large — max 20 MB')
+    if (file.size > 50 * 1024 * 1024) {
+      setError('File too large — max 50 MB')
       setTimeout(() => setError(null), 4000)
       return
     }
@@ -205,7 +205,7 @@ export function BrandGuidelinesPanel({ venueId, initialUrl, themeColor }: Props)
                       {uploading ? 'Uploading…' : 'Drop PDF here or click to upload'}
                     </p>
                     <p className="text-[12px] mt-1" style={{ color: 'rgba(240,244,255,0.30)' }}>
-                      PDF only · max 20 MB
+                      PDF only · max 50 MB
                     </p>
                   </div>
                 </div>
