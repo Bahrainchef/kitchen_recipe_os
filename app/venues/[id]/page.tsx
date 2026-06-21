@@ -6,6 +6,7 @@ import { getVenueById, getSectionsForVenue, getRecipeCountsForVenue } from '@/li
 import { SectionGrid } from '@/components/SectionGrid'
 import { ActionBar } from '@/components/ActionBar'
 import { VenueHero } from '@/components/VenueHero'
+import { BrandGuidelinesPanel } from '@/components/BrandGuidelinesPanel'
 
 const COUNTRY_FLAG: Record<string, string> = { BH: '🇧🇭', SA: '🇸🇦' }
 const COUNTRY_NAME: Record<string, string> = { BH: 'Bahrain', SA: 'Saudi Arabia' }
@@ -156,6 +157,13 @@ export default async function VenuePage({ params }: Props) {
                 <MetaChip>{recipeCounts.total} recipe{recipeCounts.total !== 1 ? 's' : ''}</MetaChip>
               )}
             </div>
+
+            {/* Brand Guidelines button — far right */}
+            <BrandGuidelinesPanel
+              venueId={id}
+              initialUrl={venue.brand_guidelines_url ?? null}
+              themeColor={venue.theme_color}
+            />
           </div>
         </div>
       </div>
