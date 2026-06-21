@@ -31,15 +31,32 @@ export function BrandGuidelinesPanel({ venueId, initialUrl, themeColor }: Props)
     setUploading(true)
     setError(null)
     try {
-      const body = new FormData()
-      body.append('file', file)
-      const res = await fetch(`/api/venues/${venueId}/brand-guidelines`, { method: 'POST', body })
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        throw new Error(d.error ?? `Upload failed (${res.status})`)
+      // Step 1 — get a signed upload URL from our server (no file goes through Vercel)
+      const signedRes = await fetch(`/api/venues/${venueId}/brand-guidelines`, { method: 'GET' })
+      if (!signedRes.ok) {
+        const d = await signedRes.json().catch(() => ({}))
+        throw new Error(d.error ?? 'Could not get upload URL')
       }
-      const { url: newUrl } = await res.json()
-      setUrl(newUrl)
+      const { signedUrl } = await signedRes.json()
+
+      // Step 2 — upload the file directly from the browser to Supabase Storage
+      const uploadRes = await fetch(signedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': 'application/pdf' },
+      })
+      if (!uploadRes.ok)
+        throw new Error(`Storage upload failed (${uploadRes.status})`)
+
+      // Step 3 — tell our server to save the public URL to the DB (tiny JSON, no file)
+      const confirmRes = await fetch(`/api/venues/${venueId}/brand-guidelines`, { method: 'PATCH' })
+      if (!confirmRes.ok) {
+        const d = await confirmRes.json().catch(() => ({}))
+        throw new Error(d.error ?? 'Failed to save URL')
+      }
+      const { url: newUrl } = await confirmRes.json()
+      // Add cache-buster so the iframe shows the newly uploaded PDF immediately
+      setUrl(`${newUrl}?t=${Date.now()}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed')
       setTimeout(() => setError(null), 5000)

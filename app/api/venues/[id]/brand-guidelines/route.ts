@@ -1,51 +1,62 @@
+// Large file uploads bypass Vercel's 4.5MB body limit by using signed upload URLs:
+// GET  → server generates a signed URL; client uploads the file directly to Supabase Storage
+// PATCH → client calls after upload to save the public URL to the DB (tiny JSON payload)
+// DELETE → removes the file from storage and clears brand_guidelines_url
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-const MAX_BYTES = 50 * 1024 * 1024
 const BUCKET = 'brand-guidelines'
 
-export async function POST(
-  req: NextRequest,
+function storagePath(id: string) {
+  return `venue-${id}/guidelines.pdf`
+}
+
+function publicUrl(id: string) {
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${storagePath(id)}`
+}
+
+// GET — issue a signed upload URL (no file passes through Vercel)
+export async function GET(
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-
-  let formData: FormData
-  try { formData = await req.formData() }
-  catch { return NextResponse.json({ error: 'Invalid form data' }, { status: 400 }) }
-
-  const file = formData.get('file') as File | null
-  if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
-  if (file.type !== 'application/pdf')
-    return NextResponse.json({ error: 'Only PDF files are accepted' }, { status: 400 })
-  if (file.size > MAX_BYTES)
-    return NextResponse.json({ error: 'File too large — max 20 MB' }, { status: 400 })
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = createAdminClient() as any
-  const path = `venue-${id}/guidelines.pdf`
-  const buffer = Buffer.from(await file.arrayBuffer())
 
-  const { error: uploadError } = await sb.storage
+  const { data, error } = await sb.storage
     .from(BUCKET)
-    .upload(path, buffer, { contentType: 'application/pdf', upsert: true })
+    .createSignedUploadUrl(storagePath(id))
 
-  if (uploadError)
-    return NextResponse.json({ error: uploadError.message }, { status: 500 })
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`
-
-  const { error: dbError } = await sb
-    .from('venues')
-    .update({ brand_guidelines_url: publicUrl })
-    .eq('id', id)
-
-  if (dbError)
-    return NextResponse.json({ error: dbError.message }, { status: 500 })
-
-  return NextResponse.json({ url: publicUrl })
+  return NextResponse.json({ signedUrl: data.signedUrl })
 }
 
+// PATCH — save public URL to DB after client has finished uploading to storage
+export async function PATCH(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createAdminClient() as any
+  const url = publicUrl(id)
+
+  const { error } = await sb
+    .from('venues')
+    .update({ brand_guidelines_url: url })
+    .eq('id', id)
+
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ url })
+}
+
+// DELETE — remove file from storage and clear DB column
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -54,7 +65,7 @@ export async function DELETE(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = createAdminClient() as any
 
-  await sb.storage.from(BUCKET).remove([`venue-${id}/guidelines.pdf`])
+  await sb.storage.from(BUCKET).remove([storagePath(id)])
 
   const { error } = await sb
     .from('venues')
