@@ -105,106 +105,126 @@ export function BrandGuidelinesPanel({ venueId, initialUrl, themeColor }: Props)
             onClick={() => { setIsOpen(false); setConfirmDelete(false) }}
           />
 
-          <div
-            className="fixed z-50 inset-x-4 top-1/2 -translate-y-1/2 max-w-2xl mx-auto rounded-2xl overflow-hidden flex flex-col"
-            style={{
-              background: '#0F1E3A',
-              border: '1px solid rgba(126,184,247,0.16)',
-              boxShadow: '0 24px 80px rgba(0,0,0,0.70)',
-              maxHeight: '85vh',
-            }}
-          >
-            {/* Header */}
+          {url ? (
+            /* ── Full-screen PDF viewer ── */
             <div
-              className="flex items-center justify-between px-5 py-4 shrink-0"
-              style={{ borderBottom: '1px solid rgba(126,184,247,0.10)' }}
+              className="fixed z-50 inset-0 flex flex-col"
+              style={{ background: '#0A1628' }}
             >
-              <div className="flex items-center gap-2">
-                <DocIcon size={16} color={themeColor} />
-                <h2 className="font-fraunces text-[16px] text-text-primary">Brand Guidelines</h2>
-              </div>
-              <button
-                onClick={() => { setIsOpen(false); setConfirmDelete(false) }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-[14px] transition-colors hover:bg-white/10"
-                style={{ color: 'rgba(240,244,255,0.45)' }}
+              {/* Header bar */}
+              <div
+                className="flex items-center justify-between px-5 py-3 shrink-0"
+                style={{ borderBottom: '1px solid rgba(126,184,247,0.10)', background: '#0F1E3A' }}
               >
-                ✕
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="p-5 overflow-y-auto flex-1">
-              {error && (
-                <div
-                  className="mb-4 px-3 py-2 rounded-lg text-[12px]"
-                  style={{ background: 'rgba(220,38,38,0.15)', color: '#FCA5A5', border: '1px solid rgba(220,38,38,0.25)' }}
-                >
-                  {error}
+                <div className="flex items-center gap-2">
+                  <DocIcon size={16} color={themeColor} />
+                  <h2 className="font-fraunces text-[16px] text-text-primary">Brand Guidelines</h2>
                 </div>
-              )}
-
-              {url ? (
-                <div className="space-y-4">
-                  {/* PDF preview */}
-                  <div
-                    className="rounded-xl overflow-hidden"
-                    style={{ border: '1px solid rgba(126,184,247,0.12)', height: 420 }}
+                <div className="flex items-center gap-3">
+                  {error && (
+                    <span className="text-[12px]" style={{ color: '#FCA5A5' }}>{error}</span>
+                  )}
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-opacity hover:opacity-85"
+                    style={{ background: themeColor, color: '#FFFFFF' }}
                   >
-                    <iframe src={url} className="w-full h-full" title="Brand Guidelines PDF" />
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold transition-opacity hover:opacity-85"
-                      style={{ background: themeColor, color: '#FFFFFF' }}
-                    >
-                      ↓ Download PDF
-                    </a>
+                    ↓ Download
+                  </a>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors hover:bg-white/10 disabled:opacity-50"
+                    style={{ color: 'rgba(240,244,255,0.70)', border: '1px solid rgba(126,184,247,0.16)' }}
+                  >
+                    {uploading ? 'Uploading…' : 'Replace'}
+                  </button>
+                  {confirmDelete ? (
+                    <>
+                      <button
+                        onClick={handleDelete}
+                        disabled={uploading}
+                        className="px-3 py-1.5 rounded-lg text-[12px] font-medium disabled:opacity-50"
+                        style={{ background: 'rgba(220,38,38,0.20)', color: '#FCA5A5', border: '1px solid rgba(220,38,38,0.30)' }}
+                      >
+                        {uploading ? 'Removing…' : 'Confirm remove'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(false)}
+                        className="text-[12px] transition-colors hover:text-text-secondary"
+                        style={{ color: 'rgba(240,244,255,0.35)' }}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      className="px-4 py-2 rounded-lg text-[13px] font-medium transition-colors hover:bg-white/08 disabled:opacity-50"
-                      style={{ color: 'rgba(240,244,255,0.70)', border: '1px solid rgba(126,184,247,0.16)' }}
+                      onClick={() => setConfirmDelete(true)}
+                      className="text-[12px] transition-colors hover:text-red-400"
+                      style={{ color: 'rgba(240,244,255,0.30)' }}
                     >
-                      {uploading ? 'Uploading…' : 'Replace PDF'}
+                      Remove
                     </button>
-                    <div className="ml-auto flex items-center gap-2">
-                      {confirmDelete ? (
-                        <>
-                          <button
-                            onClick={handleDelete}
-                            disabled={uploading}
-                            className="px-3 py-1.5 rounded-lg text-[12px] font-medium disabled:opacity-50"
-                            style={{ background: 'rgba(220,38,38,0.20)', color: '#FCA5A5', border: '1px solid rgba(220,38,38,0.30)' }}
-                          >
-                            {uploading ? 'Removing…' : 'Confirm remove'}
-                          </button>
-                          <button
-                            onClick={() => setConfirmDelete(false)}
-                            className="text-[12px] transition-colors hover:text-text-secondary"
-                            style={{ color: 'rgba(240,244,255,0.35)' }}
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmDelete(true)}
-                          className="text-[12px] transition-colors hover:text-red-400"
-                          style={{ color: 'rgba(240,244,255,0.35)' }}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  )}
+                  <button
+                    onClick={() => { setIsOpen(false); setConfirmDelete(false) }}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-[15px] transition-colors hover:bg-white/10 ml-1"
+                    style={{ color: 'rgba(240,244,255,0.50)' }}
+                  >
+                    ✕
+                  </button>
                 </div>
-              ) : (
-                /* Upload drop zone */
+              </div>
+
+              {/* PDF iframe — fills all remaining space */}
+              <iframe
+                src={url}
+                className="flex-1 w-full"
+                title="Brand Guidelines PDF"
+                style={{ border: 'none' }}
+              />
+            </div>
+          ) : (
+            /* ── Small upload modal ── */
+            <div
+              className="fixed z-50 inset-x-4 top-1/2 -translate-y-1/2 max-w-2xl mx-auto rounded-2xl overflow-hidden flex flex-col"
+              style={{
+                background: '#0F1E3A',
+                border: '1px solid rgba(126,184,247,0.16)',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.70)',
+                maxHeight: '85vh',
+              }}
+            >
+              {/* Header */}
+              <div
+                className="flex items-center justify-between px-5 py-4 shrink-0"
+                style={{ borderBottom: '1px solid rgba(126,184,247,0.10)' }}
+              >
+                <div className="flex items-center gap-2">
+                  <DocIcon size={16} color={themeColor} />
+                  <h2 className="font-fraunces text-[16px] text-text-primary">Brand Guidelines</h2>
+                </div>
+                <button
+                  onClick={() => { setIsOpen(false); setConfirmDelete(false) }}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[14px] transition-colors hover:bg-white/10"
+                  style={{ color: 'rgba(240,244,255,0.45)' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 overflow-y-auto flex-1">
+                {error && (
+                  <div
+                    className="mb-4 px-3 py-2 rounded-lg text-[12px]"
+                    style={{ background: 'rgba(220,38,38,0.15)', color: '#FCA5A5', border: '1px solid rgba(220,38,38,0.25)' }}
+                  >
+                    {error}
+                  </div>
+                )}
                 <div
                   onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
                   onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false) }}
@@ -226,9 +246,9 @@ export function BrandGuidelinesPanel({ venueId, initialUrl, themeColor }: Props)
                     </p>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
 
