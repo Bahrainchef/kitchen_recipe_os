@@ -42,7 +42,7 @@ export async function POST(
 
   const { error: dbError } = await sb
     .from('venues')
-    .update({ cover_image_url: publicUrl })
+    .update({ hero_image_url: publicUrl })
     .eq('id', id)
 
   if (dbError)

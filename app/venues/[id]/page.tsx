@@ -91,7 +91,7 @@ export default async function VenuePage({ params }: Props) {
   const isPhysical = venue.venue_type === 'physical'
   const initials = isPastryHub ? '✦' : getInitials(venue.name, id)
   const textColor = monogramTextColor(venue.theme_color)
-  const pageHeroUrl = VENUE_PAGE_HERO[id] ?? venue.cover_image_url ?? null
+  const pageHeroUrl = venue.hero_image_url ?? VENUE_PAGE_HERO[id] ?? null
 
   const bgSpec = LOGO_BG[id] ?? '#1A2F5E'
   const logoBg = bgSpec === 'theme' ? venue.theme_color : bgSpec
