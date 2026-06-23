@@ -2,11 +2,13 @@ export const dynamic = 'force-dynamic'
 
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
-import { getVenueById, getSectionsForVenue, getRecipeCountsForVenue } from '@/lib/supabase/queries'
+import { getVenueById, getSectionsForVenue, getRecipeCountsForVenue, getRecipeStubsForVenue } from '@/lib/supabase/queries'
 import { SectionGrid } from '@/components/SectionGrid'
 import { ActionBar } from '@/components/ActionBar'
 import { VenueHero } from '@/components/VenueHero'
 import { BrandGuidelinesPanel } from '@/components/BrandGuidelinesPanel'
+import { VenuePdfPanel } from '@/components/VenuePdfPanel'
+import { VenueSearchBar } from '@/components/VenueSearchBar'
 
 const COUNTRY_FLAG: Record<string, string> = { BH: '🇧🇭', SA: '🇸🇦' }
 const COUNTRY_NAME: Record<string, string> = { BH: 'Bahrain', SA: 'Saudi Arabia' }
@@ -73,10 +75,11 @@ interface Props {
 
 export default async function VenuePage({ params }: Props) {
   const { id } = await params
-  const [venue, sections, recipeCounts] = await Promise.all([
+  const [venue, sections, recipeCounts, recipeStubs] = await Promise.all([
     getVenueById(id),
     getSectionsForVenue(id),
     getRecipeCountsForVenue(id),
+    getRecipeStubsForVenue(id),
   ])
 
   if (!venue) notFound()
@@ -85,6 +88,7 @@ export default async function VenuePage({ params }: Props) {
   const countryName = venue.country_code ? COUNTRY_NAME[venue.country_code] : null
   const activeSections = sections.filter(s => s.is_active)
   const isPastryHub = venue.venue_type === 'pastry_hub'
+  const isPhysical = venue.venue_type === 'physical'
   const initials = isPastryHub ? '✦' : getInitials(venue.name, id)
   const textColor = monogramTextColor(venue.theme_color)
   const pageHeroUrl = VENUE_PAGE_HERO[id] ?? venue.cover_image_url ?? null
@@ -158,13 +162,32 @@ export default async function VenuePage({ params }: Props) {
               )}
             </div>
 
-            {/* Brand Guidelines button — far right */}
-            <BrandGuidelinesPanel
-              venueId={id}
-              initialUrl={venue.brand_guidelines_url ?? null}
-              themeColor={venue.theme_color}
-            />
+            {/* PDF buttons — far right */}
+            <div className="ml-auto flex items-center gap-2">
+              {isPhysical && (
+                <VenuePdfPanel
+                  venueId={id}
+                  apiPath="menu"
+                  initialUrl={venue.menu_url ?? null}
+                  themeColor={venue.theme_color}
+                  label="Menu"
+                  icon="menu"
+                />
+              )}
+              <BrandGuidelinesPanel
+                venueId={id}
+                initialUrl={venue.brand_guidelines_url ?? null}
+                themeColor={venue.theme_color}
+              />
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Search bar ── */}
+      <div style={{ background: '#111E36', borderBottom: '1px solid rgba(42,74,138,0.30)' }}>
+        <div className="max-w-[1400px] mx-auto px-5 tablet:px-8 py-3">
+          <VenueSearchBar venueId={id} recipes={recipeStubs} themeColor={venue.theme_color} />
         </div>
       </div>
 

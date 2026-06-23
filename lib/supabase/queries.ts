@@ -164,6 +164,31 @@ export async function getHeroPhotosForRecipes(recipeIds: string[]): Promise<Reco
   } catch (e) { console.error('[queries] getHeroPhotosForRecipes exception:', e); return {} }
 }
 
+export interface RecipeStub {
+  id: string
+  title: string
+  section_id: string
+  section_name: string
+}
+
+export async function getRecipeStubsForVenue(venueId: string): Promise<RecipeStub[]> {
+  if (!isSupabaseReady()) return []
+  try {
+    const sb = db() as any
+    const [{ data: recipes }, { data: sections }] = await Promise.all([
+      sb.from('recipes').select('id, title, section_id').eq('venue_id', venueId).neq('status', 'archived').order('title'),
+      sb.from('sections').select('id, name').eq('venue_id', venueId).eq('is_active', true),
+    ])
+    const sectionMap = new Map<string, string>((sections ?? []).map((s: any) => [s.id, s.name]))
+    return (recipes ?? []).map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      section_id: r.section_id ?? '',
+      section_name: sectionMap.get(r.section_id ?? '') ?? 'Unknown',
+    }))
+  } catch (e) { console.error('[queries] getRecipeStubsForVenue exception:', e); return [] }
+}
+
 // ─── Ingredient Master ────────────────────────────────────────────────────────
 
 export interface IngredientWithUsage extends IngredientMaster {

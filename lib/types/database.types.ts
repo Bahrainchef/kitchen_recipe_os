@@ -109,6 +109,7 @@ export interface Venue {
   logo_url: string | null
   cover_image_url: string | null
   brand_guidelines_url: string | null
+  menu_url: string | null
   theme_color: string
   vat_rate: number
   is_active: boolean

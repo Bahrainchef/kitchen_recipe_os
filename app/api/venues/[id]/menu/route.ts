@@ -1,0 +1,71 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+const BUCKET = 'venue-menus'
+
+function storagePath(id: string) {
+  return `venue-${id}/menu.pdf`
+}
+
+function publicUrl(id: string) {
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${storagePath(id)}`
+}
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createAdminClient() as any
+
+  const { data, error } = await sb.storage
+    .from(BUCKET)
+    .createSignedUploadUrl(storagePath(id), { upsert: true })
+
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ signedUrl: data.signedUrl })
+}
+
+export async function PATCH(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createAdminClient() as any
+  const url = publicUrl(id)
+
+  const { error } = await sb
+    .from('venues')
+    .update({ menu_url: url })
+    .eq('id', id)
+
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ url })
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createAdminClient() as any
+
+  await sb.storage.from(BUCKET).remove([storagePath(id)])
+
+  const { error } = await sb
+    .from('venues')
+    .update({ menu_url: null })
+    .eq('id', id)
+
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ ok: true })
+}
